@@ -1,8 +1,7 @@
 <Query Kind="Program">
   <NuGetReference>Microsoft.Extensions.DependencyInjection</NuGetReference>
+  <Namespace>Microsoft.Extensions.DependencyInjection</Namespace>
 </Query>
-
-using Microsoft.Extensions.DependencyInjection;
 
 void Main()
 {
