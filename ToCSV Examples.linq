@@ -266,17 +266,16 @@ void Main()
 
 public static class EnumerableExtensions
 {
-  #region refactored to expression-bodie methods
-  
   public static string? Join<T>(this IEnumerable<T> source)
     => source.Join<T>(',');
   
   public static string? Join<T>(this IEnumerable<T> source, char separator) 
-    => source is null ? null : string.Join(separator, source);
+    => source is null ? null 
+                      : string.Join(separator, source);
     
   public static string? Join<T>(this IEnumerable<T> source, string separator)
-    => source is null ? null : string.Join(separator, source);
-
+    => source is null ? null 
+                      : string.Join(separator, source);
 
   public static string? ToCSV<T>(this IEnumerable<T> source)    
     => Join<T>(source);
@@ -286,45 +285,4 @@ public static class EnumerableExtensions
     
   public static string? ToCSV<T>(this IEnumerable<T> source, string separator) 
     => Join<T>(source, separator);
-  
-  #endregion
-  
-#region COMMENTED OUT: older, regular method syntax ...
-//
-//  public static string? Join<T>(this IEnumerable<T> source)
-//  {
-//    return source.Join<T>(',');
-//  }
-//
-//  public static string? Join<T>(this IEnumerable<T> source, char separator)
-//  {
-//    return source == null
-//                   ? null
-//                   : string.Join(separator, source);
-//  }
-//
-//  public static string? Join<T>(this IEnumerable<T> source, string separator)
-//  {
-//    return source == null
-//                   ? null
-//                   : string.Join(separator, source);
-//  }
-//
-//
-//  public static string? ToCSV<T>(this IEnumerable<T> source)    
-//  {
-//    return Join<T>(source);
-//  }
-//
-//  public static string? ToCSV<T>(this IEnumerable<T> source, char separator)
-//  {
-//    return Join<T>(source, separator);
-//  }  
-//    
-//  public static string? ToCSV<T>(this IEnumerable<T> source, string separator) 
-//  {
-//    return Join<T>(source, separator);
-//  }
-//
-#endregion
 }
