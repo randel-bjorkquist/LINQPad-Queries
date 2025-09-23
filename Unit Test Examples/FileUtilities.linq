@@ -1,3 +1,14 @@
+<Query Kind="Program">
+  <Namespace>Xunit</Namespace>
+  <Namespace>System.Threading.Tasks</Namespace>
+  <Namespace>System.Security.Cryptography</Namespace>
+  <Namespace>System.Security.Principal</Namespace>
+  <Namespace>System.Runtime.InteropServices</Namespace>
+  <Namespace>System.IO.Compression</Namespace>
+  <Namespace>System.Text.Json</Namespace>
+  <IncludeUncapsulator>false</IncludeUncapsulator>
+</Query>
+
 #load "xunit"
 
 void Main()
@@ -3418,7 +3429,3 @@ public class mcsFileUtilitiesPerformanceTests : IDisposable
     Assert.False(msRef.IsAlive, "MemoryStream should be collectible");
   }
 }
-
-
-
-
