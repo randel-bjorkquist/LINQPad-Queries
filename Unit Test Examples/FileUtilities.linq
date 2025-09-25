@@ -2666,7 +2666,7 @@ public sealed class NoCompressionStrategy : ICompressionStrategy
     if(input  == null)  throw new ArgumentNullException(nameof(input));      
     if(output == null)  throw new ArgumentNullException(nameof(output));
     
-    using var destination = Compress(output, leave_open: true);
+    using var destination = Decompress(output, leave_open: true);
       input.CopyTo(destination);
   }  
   
