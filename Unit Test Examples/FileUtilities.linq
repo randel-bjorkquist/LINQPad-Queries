@@ -8,7 +8,6 @@
   <Namespace>System.Text.Json</Namespace>
   <IncludeUncapsulator>false</IncludeUncapsulator>
 </Query>
-
 #load "xunit"
 
 void Main()
@@ -273,12 +272,13 @@ void Main()
   #endregion
 
   #endregion
-
-  //RunTests();  // Call RunTests() or press Alt+Shift+T to initiate testing.
-  //RunTests(filter: test_case => test_case.TestMethod.TestClass.Class.Name == "UserQuery+mcsFileUtilitiesTests");
   
-  //RunTests(filter: test_case => test_case.TestMethod.TestClass.Class.Name == "UserQuery+mcsFileUtilitiesTests1");
-  //RunTests(filter: test_case => test_case.TestMethod.TestClass.Class.Name == "UserQuery+mcsFileUtilitiesTests2");
+  mcsFileUtilities.IsDevelopment().Dump("IsDevelopment");
+  
+  //RunTests();  // Call RunTests() or press Alt+Shift+T to initiate testing.
+  
+  RunTests(filter: test_case => test_case.TestMethod.TestClass.Class.Name == "UserQuery+mcsFileUtilitiesTests");
+  RunTests(filter: test_case => test_case.TestMethod.TestClass.Class.Name == "UserQuery+mcsFileUtilitiesPerformanceTests");
   
   //RunTests(filter: test_case => test_case.TestMethod.TestClass.Class.Name == "UserQuerymcsFileUtilitiesPerformanceTests"
   //                           && test_case.TestMethod.Method.Name == "FileRoundTrip_PerformanceTest");
@@ -286,13 +286,12 @@ void Main()
   //RunTest("FileRoundTrip_PerformanceTest");
   //RunTest("FileRoundTrip_PerformanceTest");
   //RunTest("FileRoundTrip_WithBuffer_PerformanceTest");
-
-  RunTest("FileRoundTrip_WithoutBuffer_PerformanceTest");
-  RunTest("FileRoundTrip_ZeroLength");
-  //RunTest("FileToStream_LeaveOpenBehavior");
-  //RunTest("FileToStream_MemoryCleanup");
   
-  //Util.OnDump += obj => Console.WriteLine($"DUMP: {obj}");
+  //RunTest("FileFromStream_RoundTrip");
+  //RunTest("FileRoundTrip_WithoutBuffer_PerformanceTest");
+  //RunTest("FileRoundTrip_ZeroLength");
+  //RunTest("FileToStream_LeaveOpenStreamBehavior");
+  //RunTest("FileToStream_PipelineStreamBehavior");
 }
 
 /// <summary>
@@ -418,8 +417,10 @@ public static class mcsFileUtilities
     
     return ExecuteFileStreamOperation(nameof(ReadBinaryFile), path, options, () => {
       EnsureReadable(path, options);
-
-      using var ms = new MemoryStream();
+      
+      ValidateProtectionMode(options.AtRest);
+      ValidateStrategies(options, options.AtRest);
+      
       using(var file = new FileStream( path
                                       ,FileMode.Open
                                       ,FileAccess.Read
@@ -436,23 +437,62 @@ public static class mcsFileUtilities
                                                     ,AtRest = options.AtRest
                                                     ,Success = true });
                                                     
-          return (0, Array.Empty<byte>());
+          return Array.Empty<byte>();
         }
         
-        using var pipeline = BuildReadPipeline(file, options, options.AtRest, leave_open: true);
+        using var read_pipeline = BuildReadPipeline(file, options, options.AtRest, leave_open: true);
+        using var ms = new MemoryStream();
         
-        pipeline.CopyTo(ms, options.FileBufferSize);
-        ms.Flush();
+        read_pipeline.CopyTo(ms, options.FileBufferSize);
+        ms.Position = 0;
         
-        options?.Logger?.Invoke(new FileLogEntry { Timestamp = now
-                                                  ,Level     = LogLevelEnum.INFORMATION
-                                                  ,Operation = nameof(ReadBinaryFile)
-                                                  ,Message   = $"Read {ms.Length} bytes from {path} (AtRest={options.AtRest})"
-                                                  ,AtRest    = options.AtRest
-                                                  ,Success   = true });
-        return (file.Length, ms.ToArray());        
+        var result = ms.ToArray();
+        
+        options?.Logger
+               ?.Invoke(new FileLogEntry{ Timestamp = now
+                                         ,Level     = LogLevelEnum.INFORMATION
+                                         ,Operation = nameof(ReadBinaryFile)
+                                         ,Path      = path
+                                         ,Message   = $"Read {result.Length} bytes from {path} (AtRest={options.AtRest})"
+                                         ,AtRest    = options.AtRest
+                                         ,Success   = true });
+                                         
+        return result;
+
+#region COMMENTED OUT
+        //try
+        //{        
+        //  read_pipeline.CopyTo(ms, options.FileBufferSize);
+        //  //ms.Flush();
+        //}
+        //catch(Exception ex)
+        //{
+        //  file.Position = 0;
+        //  var raw_bytes = new byte[Math.Min(file.Length, 256)]; //Limit to 256 bytes for brevity
+        //  file.Read(raw_bytes, 0, raw_bytes.Length);
+        //  
+        //  options?.Logger
+        //         ?.Invoke(new FileLogEntry{ Timestamp = now
+        //                                   ,Level     = LogLevelEnum.DEBUG
+        //                                   ,Operation = nameof(ReadBinaryFile)
+        //                                   ,Message = $"Raw file bytes (first {raw_bytes.Length} bytes): {BitConverter.ToString(raw_bytes)}"
+        //                                   ,AtRest    = options.AtRest
+        //                                   ,Success   = true });
+        //  throw;
+        //}
+        //
+        //options?.Logger
+        //       ?.Invoke(new FileLogEntry{ Timestamp = now
+        //                                 ,Level     = LogLevelEnum.INFORMATION
+        //                                 ,Operation = nameof(ReadBinaryFile)
+        //                                 ,Message   = $"Read {ms.Length} bytes from {path} (AtRest={options.AtRest})"
+        //                                 ,AtRest    = options.AtRest
+        //                                 ,Success   = true });
+        //
+        //return ms.ToArray();
+#endregion
       }
-    }).Item2; //Converts the tuple of (int, byte[]) to simply byte[]
+    });
     
     #region COMMENTED OUT: original code, access data via File.ReadAllBytes
     //
@@ -554,33 +594,37 @@ public static class mcsFileUtilities
       {
         if(data.Length == 0)
         {
-          options?.Logger?.Invoke(new FileLogEntry { Timestamp = now
-                                                    ,Level     = LogLevelEnum.INFORMATION
-                                                    ,Operation = nameof(WriteBinaryFile)
-                                                    ,Message   = $"Empty input detected, writing zero-length file (AtRest={options.AtRest})"
-                                                    ,AtRest    = options.AtRest
-                                                    ,Success   = true });
+          options?.Logger
+                 ?.Invoke(new FileLogEntry{ Timestamp = now
+                                           ,Level     = LogLevelEnum.INFORMATION
+                                           ,Operation = nameof(WriteBinaryFile)
+                                           ,Message   = $"Empty input detected, writing zero-length file (AtRest={options.AtRest})"
+                                           ,AtRest    = options.AtRest
+                                           ,Success   = true });
           
           file.SetLength(0);
           final_position = 0;
+          
+          return (0, final_position);
         }
-        else
-        {
-          using var pipeline = BuildWritePipeline(file, options, options.AtRest, leave_open: false);
-          
-          pipeline.Write(data, 0, data.Length);
-          pipeline.Flush();
-          
-          file.SetLength(file.Position);
-          final_position = file.Position;
 
-          options?.Logger?.Invoke(new FileLogEntry { Timestamp = now
-                                                    ,Level     = LogLevelEnum.INFORMATION
-                                                    ,Operation = nameof(WriteBinaryFile)
-                                                    ,Message   = $"Wrote {data.Length} bytes, final file size={final_position} (AtRest={options.AtRest})"
-                                                    ,AtRest = options.AtRest
-                                                    ,Success = true });
-        }
+        using var pipeline = BuildWritePipeline(file, options, options.AtRest, leave_open: true);
+        
+        pipeline.Write(data, 0, data.Length);
+        pipeline.Flush();
+        
+        file.Flush(true);
+        //file.SetLength(file.Position);
+        
+        final_position = file.Position;
+
+        options?.Logger
+               ?.Invoke(new FileLogEntry{ Timestamp = now
+                                         ,Level     = LogLevelEnum.INFORMATION
+                                         ,Operation = nameof(WriteBinaryFile)
+                                         ,Message   = $"Wrote {data.Length} bytes, final file size={final_position} (AtRest={options.AtRest})"
+                                         ,AtRest    = options.AtRest
+                                         ,Success   = true });
       }
                                       
       return (data.Length, final_position);
@@ -786,10 +830,7 @@ public static class mcsFileUtilities
       ValidateStrategies(options, options.InTransit);
       ValidateStrategies(options, options.AtRest);
       
-      #region COMMENTED OUT: attempted fix
-      
-      long? final_position;
-      
+      long? final_position;      
       using(var file = new FileStream( destination
                                       ,options.Overwrite ? FileMode.Create : FileMode.CreateNew
                                       ,FileAccess.Write
@@ -799,13 +840,14 @@ public static class mcsFileUtilities
       {
         if(input.CanSeek && input.Length == 0)
         {
-          options?.Logger?.Invoke(new FileLogEntry { Timestamp = now
-                                                    ,Level     = LogLevelEnum.INFORMATION
-                                                    ,Operation = nameof(FileFromStream)
-                                                    ,Message   = $"Empty input stream detected, writing zero-length file (AtRest={options.AtRest}, InTransit={options.InTransit})"
-                                                    ,AtRest    = options.AtRest
-                                                    ,InTransit = options.InTransit
-                                                    ,Success   = true });
+          options?.Logger
+                 ?.Invoke(new FileLogEntry{ Timestamp = now
+                                           ,Level     = LogLevelEnum.INFORMATION
+                                           ,Operation = nameof(FileFromStream)
+                                           ,Message   = $"Empty input stream detected, writing zero-length file (AtRest={options.AtRest}, InTransit={options.InTransit})"
+                                           ,AtRest    = options.AtRest
+                                           ,InTransit = options.InTransit
+                                           ,Success   = true });
                                                    
           file.SetLength(0);
           final_position = 0;
@@ -813,31 +855,35 @@ public static class mcsFileUtilities
           return (0, final_position);
         }
         
-        using var transit = BuildReadPipeline(input, options, options.InTransit, leave_open);
-        using(var atRest = BuildWritePipeline(file, options, options.AtRest, leave_open: true))
-        {
-          //Console.WriteLine($"[DEBUG - FileFromStream] Before CopyTo: transit.CanRead={transit.CanRead}, atRest.CanWrite={atRest.CanWrite}");
-          transit.CopyTo(atRest, options.FileBufferSize);
-          //Console.WriteLine($"[DEBUG - FileFromStream] After CopyTo: fileLength={file.Length}, filePosition={(file.CanSeek ? file.Position.ToString() : "N/A")}");
-          
-          atRest.Flush();
-          
-          file.Flush(true); // Force flush to disk
-          final_position = file.Position;
-        }
+        //using var read_pipeline  = BuildReadPipeline(input, options, options.InTransit, leave_open);
+        //using var write_pipeline = BuildWritePipeline(file, options, options.AtRest, leave_open: true);
         
-        options?.Logger?.Invoke(new FileLogEntry { Timestamp  = now
-                                                  ,Level      = LogLevelEnum.INFORMATION
-                                                  ,Operation  = nameof(FileFromStream)
-                                                  ,Message    = $"Wrote {final_position} bytes to {destination} (AtRest={options.AtRest}, InTransit={options.InTransit})"
-                                                  ,AtRest     = options.AtRest
-                                                  ,InTransit  = options.InTransit
-                                                  ,Success    = true });
+        using var read_pipeline  = BuildReadPipeline(input, options, options.InTransit, leave_open);
+        using var write_pipeline = BuildWritePipeline(file, options, options.AtRest, leave_open);
+        
+        read_pipeline.CopyTo(write_pipeline, options.FileBufferSize);        
+        
+        if(write_pipeline is CryptoStream cs)
+          cs.FlushFinalBlock();
+        
+        write_pipeline.Flush();
+        
+        file.Flush(true); // Force flush to disk
+        //file.SetLength(file.Position);
+        
+        final_position = file.Position;
+        
+        options?.Logger
+               ?.Invoke(new FileLogEntry{ Timestamp  = now
+                                         ,Level      = LogLevelEnum.INFORMATION
+                                         ,Operation  = nameof(FileFromStream)
+                                         ,Message    = $"Wrote {final_position} bytes to {destination} (AtRest={options.AtRest}, InTransit={options.InTransit})"
+                                         ,AtRest     = options.AtRest
+                                         ,InTransit  = options.InTransit
+                                         ,Success    = true });
       }
       
       return (input.CanSeek ? input.Length : 0, final_position);
-      
-      #endregion
       
       #region COMMENTED OUT: original code
       //
@@ -879,7 +925,14 @@ public static class mcsFileUtilities
   /// <summary>Read from a physical file → write it to stream</summary>
   public static void FileToStream(string source, Stream output, mcsFileOptions options, bool leave_open = true)
   {
+    if(source == null)
+      throw new ArgumentNullException(nameof(source));
+    
+    if(output == null)
+      throw new ArgumentNullException(nameof(output));
+    
     options ??= new mcsFileOptions();
+    var now = DateTime.UtcNow;
 
     ExecuteFileStreamOperation(nameof(FileToStream), source, options, () => {
       EnsureReadable(source, options);
@@ -890,60 +943,86 @@ public static class mcsFileUtilities
       ValidateStrategies(options, options.AtRest);
       ValidateStrategies(options, options.InTransit);
       
-      #region COMMENTED OUT: attempted fix
-      //
-      //long? final_position;
-      //
-      //using(var file = new FileStream( source
-      //                                ,FileMode.Open
-      //                                ,FileAccess.Read
-      //                                ,options.FileReadShare
-      //                                ,options.FileBufferSize
-      //                                ,options.FileReadOptions ))
-      //{
-      //  using var atRest = BuildReadPipeline(file, options, options.AtRest, leave_open);
-      //  using(var transit = BuildWritePipeline(output, options, options.InTransit, leave_open))
-      //  {
-      //    Console.WriteLine($"[DEBUG - FileToStream] Before CopyTo: atRest.CanRead={atRest.CanRead}, transit.CanWrite={transit.CanWrite}");
-      //    atRest.CopyTo(transit, options.FileBufferSize);
-      //    Console.WriteLine($"[DEBUG - FileToStream] After CopyTo: sourceLength={file.Length}, outputPosition={(output.CanSeek ? output.Position.ToString() : "N/A")}");
-      //
-      //    transit.Flush();
-      //    final_position = output.CanSeek ? output.Position : (long?)null;
-      //  }
-      //}
-      //
-      //var file_info = new FileInfo(source);
-      //return (file_info.Length, final_position);
-      //
-      #endregion
-      
-      using var file = new FileStream( source
+      long? final_position;
+      using(var file = new FileStream( source
                                       ,FileMode.Open
                                       ,FileAccess.Read
                                       ,options.FileReadShare
                                       ,options.FileBufferSize
-                                      ,options.FileReadOptions );
+                                      ,options.FileReadOptions ))
+      {
+        if(file.Length == 0)
+        {
+          options?.Logger
+                 ?.Invoke(new FileLogEntry { Timestamp = now
+                                            ,Level     = LogLevelEnum.INFORMATION
+                                            ,Operation = nameof(FileToStream)
+                                            ,Message = $"Empty source file detected, no data transferred (AtRest={options.AtRest}, InTransit={options.InTransit})"
+                                            ,Path      = source
+                                            ,AtRest    = options.AtRest
+                                            ,InTransit = options.InTransit
+                                            ,Success   = true });
+          return (0, 0);
+        }
+
+        //using var read_pipeline  = BuildReadPipeline(file, options, options.AtRest, leave_open: true);
+        //using var write_pipeline = BuildWritePipeline(output, options, options.InTransit, leave_open);
+        
+        using var read_pipeline  = BuildReadPipeline(file, options, options.AtRest, leave_open);
+        using var write_pipeline = BuildWritePipeline(output, options, options.InTransit, leave_open);
+        
+        read_pipeline.CopyTo(write_pipeline, options.FileBufferSize);
+        
+        if(write_pipeline is CryptoStream cs)
+          cs.FlushFinalBlock();
+        
+        write_pipeline.Flush();
+          
+        final_position = output.CanSeek ? output.Position : file.Position;
+
+        options?.Logger
+               ?.Invoke(new FileLogEntry { Timestamp = now
+                                          ,Level     = LogLevelEnum.INFORMATION
+                                          ,Operation = nameof(FileToStream)
+                                          ,Message = $"Operation 'FileToStream' succeeded for {source} with {final_position} bytes transferred, final position {final_position}."
+                                          ,Path      = source
+                                          ,AtRest    = options.AtRest
+                                          ,InTransit = options.InTransit
+                                          ,Success   = true });
+        
+        return (file.Length, final_position);
+      }
       
-      using var atRest  = BuildReadPipeline(file, options, options.AtRest, leave_open);
-      using var transit = BuildWritePipeline(output, options, options.InTransit, leave_open);
+      #region COMMENTED OUT: original code
       
-      long start_position = output.CanSeek ? output.Position : 0;
+      //using var file = new FileStream( source
+      //                                ,FileMode.Open
+      //                                ,FileAccess.Read
+      //                                ,options.FileReadShare
+      //                                ,options.FileBufferSize
+      //                                ,options.FileReadOptions );
+      //
+      //using var atRest  = BuildReadPipeline(file, options, options.AtRest, leave_open);
+      //using var transit = BuildWritePipeline(output, options, options.InTransit, leave_open);
+      //
+      //long start_position = output.CanSeek ? output.Position : 0;
+      //
+      ////Console.WriteLine($"[DEBUG - FileToStream] Before CopyTo: atRest.CanRead={atRest.CanRead}, transit.CanWrite={transit.CanWrite}");
+      //atRest.CopyTo(transit, options.FileBufferSize);
+      ////Console.WriteLine($"[DEBUG - FileToStream] After CopyTo: sourceLength={file.Length}, outputPosition={(output.CanSeek ? output.Position.ToString() : "N/A")}");
+      //
+      //transit.Flush();
+      //output.Flush();
+      //
+      //long? final_position = output.CanSeek ? output.Position : (long?)null;
+      //
+      //long bytes_transferred = final_position.HasValue 
+      //                       ? final_position.Value - start_position 
+      //                       : file.Length;
+      //
+      //return (bytes_transferred, final_position);
       
-      //Console.WriteLine($"[DEBUG - FileToStream] Before CopyTo: atRest.CanRead={atRest.CanRead}, transit.CanWrite={transit.CanWrite}");
-      atRest.CopyTo(transit, options.FileBufferSize);
-      //Console.WriteLine($"[DEBUG - FileToStream] After CopyTo: sourceLength={file.Length}, outputPosition={(output.CanSeek ? output.Position.ToString() : "N/A")}");
-      
-      transit.Flush();
-      output.Flush();
-      
-      long? final_position = output.CanSeek ? output.Position : (long?)null;
-      
-      long bytes_transferred = final_position.HasValue 
-                             ? final_position.Value - start_position 
-                             : file.Length;
-      
-      return (bytes_transferred, final_position);
+      #endregion
     });
   }
   
@@ -951,10 +1030,10 @@ public static class mcsFileUtilities
   
   #region INTERNAL HELPERS
   
-  private static bool IsDevelopment()
+  public static bool IsDevelopment()
   {
     var env = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT");
-    return string.Equals(env, "Development", StringComparison.OrdinalIgnoreCase);
+    return env == null || string.Equals(env, "Development", StringComparison.OrdinalIgnoreCase);
   }
   
   private static void EnsureWritable(string path, mcsFileOptions options)
@@ -962,18 +1041,20 @@ public static class mcsFileUtilities
     //Argument 'null' checks ...
     if(string.IsNullOrWhiteSpace(path))
     {
-      options?.Logger?.Invoke(new LogEntry { Message   = $"Argument '{nameof(path)}' was either null or whitespaces."
-                                            ,Level     = LogLevelEnum.DEBUG
-                                            ,Timestamp = DateTime.UtcNow });
+      options?.Logger
+             ?.Invoke(new LogEntry{ Message   = $"Argument '{nameof(path)}' was either null or whitespaces."
+                                   ,Level     = LogLevelEnum.DEBUG
+                                   ,Timestamp = DateTime.UtcNow });
       
       throw new ArgumentNullException(nameof(path));
     }
     
     if(options == null)
     {
-      options?.Logger?.Invoke(new LogEntry { Message   = $"Argument '{nameof(options)}' was null."
-                                            ,Level     = LogLevelEnum.DEBUG
-                                            ,Timestamp = DateTime.UtcNow });
+      options?.Logger
+             ?.Invoke(new LogEntry{ Message   = $"Argument '{nameof(options)}' was null."
+                                   ,Level     = LogLevelEnum.DEBUG
+                                   ,Timestamp = DateTime.UtcNow });
       
       throw new ArgumentNullException(nameof(options));
     }
@@ -993,18 +1074,20 @@ public static class mcsFileUtilities
   {
     if(string.IsNullOrWhiteSpace(path))
     {
-      options?.Logger?.Invoke(new LogEntry { Message   = $"Argument '{nameof(path)}' was either null or whitespaces."
-                                            ,Level     = LogLevelEnum.DEBUG
-                                            ,Timestamp = DateTime.UtcNow });
+      options?.Logger
+             ?.Invoke(new LogEntry{ Message   = $"Argument '{nameof(path)}' was either null or whitespaces."
+                                   ,Level     = LogLevelEnum.DEBUG
+                                   ,Timestamp = DateTime.UtcNow });
       
       throw new ArgumentNullException(nameof(path));
     }
     
     if(options == null)
     {
-      options?.Logger?.Invoke(new LogEntry { Message   = $"Argument '{nameof(options)}' was null."
-                                            ,Level     = LogLevelEnum.DEBUG
-                                            ,Timestamp = DateTime.UtcNow });
+      options?.Logger
+             ?.Invoke(new LogEntry{ Message   = $"Argument '{nameof(options)}' was null."
+                                   ,Level     = LogLevelEnum.DEBUG
+                                   ,Timestamp = DateTime.UtcNow });
       
       throw new ArgumentNullException(nameof(options));
     }
@@ -1013,9 +1096,10 @@ public static class mcsFileUtilities
     {
       var ex = new FileNotFoundException();
 
-      options?.Logger?.Invoke(new LogEntry { Message   = ex.Message
-                                            ,Level     = LogLevelEnum.ERROR
-                                            ,Timestamp = DateTime.UtcNow });
+      options?.Logger
+             ?.Invoke(new LogEntry{ Message   = ex.Message
+                                   ,Level     = LogLevelEnum.ERROR
+                                   ,Timestamp = DateTime.UtcNow });
       throw ex;
     }
     
@@ -1031,9 +1115,10 @@ public static class mcsFileUtilities
     }
     catch(Exception ex)
     {
-      options?.Logger?.Invoke(new LogEntry { Message   = $"File '{path}' exists but could not be opened for read access. {ex.Message}"
-                                            ,Level     = LogLevelEnum.ERROR
-                                            ,Timestamp = DateTime.UtcNow });
+      options?.Logger
+             ?.Invoke(new LogEntry{ Message   = $"File '{path}' exists but could not be opened for read access. {ex.Message}"
+                                   ,Level     = LogLevelEnum.ERROR
+                                   ,Timestamp = DateTime.UtcNow });
       throw;
     }
   }
@@ -1054,19 +1139,36 @@ public static class mcsFileUtilities
   
   public static bool TryValidateProtectionMode(DataProcessingModeEnum mode, out DataProcessingModeEnum valid_mode)
   {
-    //NOTE: Checks to see if 'mode' contains any bits outside of 'Encrypt' or 'Compress'; if it
-    //      does, reject it. Helps to guard against something like this: 'mode = (DataProcessingModeEnum)99'
-    const DataProcessingModeEnum all_vaild_flags = DataProcessingModeEnum.Encrypt | DataProcessingModeEnum.Compress;
-    
-    //NOTE: 'None (0)' is always valid
-    if((mode & ~all_vaild_flags) == 0)
+    try
     {
+      ValidateProtectionMode(mode);
       valid_mode = mode;
       return true;
     }
+    catch
+    {
+      valid_mode = DataProcessingModeEnum.None;
+      return false;
+    }
     
-    valid_mode = DataProcessingModeEnum.None;
-    return false;
+    
+    #region COMMENTED OUT: original code
+    //
+    ////NOTE: Checks to see if 'mode' contains any bits outside of 'Encrypt' or 'Compress'; if it
+    ////      does, reject it. Helps to guard against something like this: 'mode = (DataProcessingModeEnum)99'
+    //const DataProcessingModeEnum all_vaild_flags = DataProcessingModeEnum.Encrypt | DataProcessingModeEnum.Compress;
+    //
+    ////NOTE: 'None (0)' is always valid
+    //if((mode & ~all_vaild_flags) == 0)
+    //{
+    //  valid_mode = mode;
+    //  return true;
+    //}
+    //
+    //valid_mode = DataProcessingModeEnum.None;
+    //return false;
+    //
+    #endregion
   }
   
   private static void ValidateStrategies(mcsFileOptions options, DataProcessingModeEnum mode)
@@ -1317,7 +1419,7 @@ public static class mcsFileUtilities
   /// A wrapped <see cref="Stream"/> from which PLAINTEXT can be read. Disposing the returned
   /// stream will close any transform streams (unless <c>leaveOpen</c> was specified).
   /// </returns>
-  private static Stream BuildReadPipeline(Stream source, mcsFileOptions options, DataProcessingModeEnum mode, bool leave_open = true)
+  public static Stream BuildReadPipeline(Stream source, mcsFileOptions options, DataProcessingModeEnum mode, bool leave_open = true)
   {
     //Pipeline Order: Source → Decrypt → Decompress → Plaintext
     if(source == null) throw new ArgumentNullException(nameof(source));
@@ -1337,41 +1439,54 @@ public static class mcsFileUtilities
     
     ValidateStrategies(options, mode);
     
-    //Stream current = source;
-    Stream current = new LeaveOpenStream(source);
-    
-    if(source.CanSeek && source.Length == 0)
+    Stream current = leave_open
+                   ? new LeaveOpenStream(source)
+                   : source;
+
+    #region IMPORTANT: working solution
+
+    if(mode.HasFlag(DataProcessingModeEnum.Encrypt) && !options.Encryption.IsNoOp)
     {
-      options.Logger?.Invoke(new FileLogEntry { Timestamp = now
-                                               ,Level     = LogLevelEnum.INFORMATION
-                                               ,Operation = nameof(BuildReadPipeline)
-                                               ,Message = $"Empty source stream detected, returning unprocessed stream (Mode={mode})"
-                                               ,AtRest = mode
-                                               ,Success = true });
-      
-      return leave_open ? new LeaveOpenStream(source) : source;      
+      if(mode.HasFlag(DataProcessingModeEnum.Compress) && !options.Compression.IsNoOp)
+      {
+        //Decrypt to a temporary MemoryStream, then decompress
+        var temp = new MemoryStream();
+        Stream crypto_stream = null;
+        
+        try
+        {
+          crypto_stream = options.Encryption.Decrypt(current, leave_open);
+          crypto_stream.CopyTo(temp);
+          
+          temp.Position = 0;
+          
+          var decompression_stream = options.Compression.Decompress(temp, leave_open);          
+
+          return new PipelineStream(decompression_stream, () => {
+            decompression_stream.Dispose();
+            temp.Dispose();
+          });
+        }
+        catch
+        {
+          crypto_stream?.Dispose();
+          temp?.Dispose();
+          throw;
+        }
+      }
+      else
+      {
+        current = options.Encryption.Decrypt(current, leave_open);
+      }
+    }
+    else if(mode.HasFlag(DataProcessingModeEnum.Compress) && !options.Compression.IsNoOp)
+    {
+      current = options.Compression.Decompress(current, leave_open);
     }
     
-    //NOTE: First unwrap encryption (ciphertext → compressed plaintext); decrypt first
-    //      (ciphertext → plaintext-ish stream)
-    if(mode.HasFlag(DataProcessingModeEnum.Encrypt))
-      current = options.Encryption.Decrypt(current, leave_open: false);
-    
-    //NOTE: Then unwrap compression (compressed plaintext → plaintext); decompress 
-    //      (plaintext compressed → plaintext)
-    if(mode.HasFlag(DataProcessingModeEnum.Compress))
-      current = options.Compression.Decompress(current, leave_open: false);
-    
-//    //REQUIRED: catches edge cases where either encryption or compression are configured 
-//    //          with no-op strategies, it honors leave_open
-//    if(leave_open && current == source)
-//      return new LeaveOpenStream(source);
-//    
-    //REQUIRED: for all other, no-op strategies ...
     return current;
     
-    // REQUIRED: Honor leave_open for the source stream
-    //return leave_open && current != source ? new LeaveOpenStream(current) : current;
+  #endregion    
   }
 
   /// <summary>
@@ -1400,7 +1515,7 @@ public static class mcsFileUtilities
   /// A wrapped <see cref="Stream"/> into which PLAINTEXT should be written. Disposing the returned
   /// stream will flush and finalize transforms (e.g., GZip footer, crypto block).
   /// </returns>
-  private static Stream BuildWritePipeline(Stream destination, mcsFileOptions options, DataProcessingModeEnum mode, bool leave_open = true)
+  public static Stream BuildWritePipeline(Stream destination, mcsFileOptions options, DataProcessingModeEnum mode, bool leave_open = true)
   {
     //Pipeline Order: Plaintext → Compress → Encrypt → Destination    
     if(destination == null) throw new ArgumentNullException(nameof(destination));
@@ -1420,41 +1535,117 @@ public static class mcsFileUtilities
 
     ValidateStrategies(options, mode);
     
-//    Stream current = destination;
-    Stream current = new LeaveOpenStream(destination);
-    
-//    if(destination.CanSeek && destination.Length == 0)
-//    {
-//      options.Logger?.Invoke(new FileLogEntry { Timestamp = now
-//                                               ,Level     = LogLevelEnum.INFORMATION
-//                                               ,Operation = nameof(BuildReadPipeline)
-//                                               ,Message   = $"Empty destination stream detected, returning unprocessed stream (Mode={mode})"
-//                                               ,AtRest    = mode
-//                                               ,Success   = true });
-//      
-//      return leave_open ? new LeaveOpenStream(destination) : destination;
-//    }
-    
-    //NOTE: First wrap with compression (compress plaintext → feed into encryption); Compression 
-    //      wraps encryption (so it runs first on plain text)
-    if(mode.HasFlag(DataProcessingModeEnum.Compress) && !options.Compression.IsNoOp)
-      current = options.Compression.Compress(current, leave_open: false);
-    
-    //NOTE: Then wrap with encryption (ciphertext is what hits the destination); Encryption
-    //      is close to the final destination (because we want to compress THEN encrypt)
-    if(mode.HasFlag(DataProcessingModeEnum.Encrypt) && !options.Encryption.IsNoOp)
-      current = options.Encryption.Encrypt(current, leave_open: false);
-    
-//    //REQUIRED: catches edge cases where either encryption or compression are configured 
-//    //          with no-op strategies, it honors leave_open
-//    if(leave_open && current == destination)
-//      return new LeaveOpenStream(destination);
-//    
-    //REQUIRED: for all other, no-op strategies ...
-    return current;
+    Stream current = leave_open 
+                   ? new LeaveOpenStream(destination) 
+                   : destination;
 
-    // REQUIRED: Honor leave_open for the destination stream
-    //return leave_open && current != destination ? new LeaveOpenStream(current) : current;
+#region COMMENTED OUT    
+//    //NOTE: bypasses pipeline for empty streams
+////    if(destination.CanSeek && destination.Position == destination.Length && destination.Length == 0 && mode != DataProcessingModeEnum.None)
+////    {
+////      options?.Logger
+////             ?.Invoke(new FileLogEntry{ Timestamp = now
+////                                       ,Level     = LogLevelEnum.INFORMATION
+////                                       ,Operation = nameof(BuildReadPipeline)
+////                                       ,Message   = $"Empty destination stream detected, returning unprocessed stream (Mode={mode})"
+////                                       ,AtRest    = mode
+////                                       ,Success   = true });
+////      
+////      return leave_open ? new LeaveOpenStream(destination) : destination;
+////    }
+//    
+//    //NOTE: First wrap with compression (compress plaintext → feed into encryption); Compression 
+//    //      wraps encryption (so it runs first on plain text)
+//    if(mode.HasFlag(DataProcessingModeEnum.Compress) && !options.Compression.IsNoOp)
+//    {
+//      current = options.Compression.Compress(current, leave_open: false);
+//      
+////      // Use a temporary MemoryStream to ensure GZipStream is finalized before encryption
+////      var temp = new MemoryStream();
+////      using (var gzip = options.Compression.Compress(temp, leave_open: true))
+////      {
+////        current = gzip; //Temporarily reassign current for the pipeline
+////      }
+////      
+////      temp.Position = 0;  //Reset for encryption
+////      current = temp; //Use the compressed data for the next stage
+//    }
+//    
+//    //NOTE: Then wrap with encryption (ciphertext is what hits the destination); Encryption
+//    //      is close to the final destination (because we want to compress THEN encrypt)
+//    if(mode.HasFlag(DataProcessingModeEnum.Encrypt) && !options.Encryption.IsNoOp)
+//    {
+//      current = options.Encryption.Encrypt(current, leave_open: false);
+//    }
+//    
+////    //NOTE: if compression was used, copy to destination
+////    if(current is MemoryStream ms)
+////    {
+////      ms.CopyTo(destination);
+////      ms.Dispose();
+////      
+////      return leave_open ? new LeaveOpenStream(destination) : destination;
+////    }
+#endregion
+    
+    #region IMPORTANT: working solution
+    
+    if(mode.HasFlag(DataProcessingModeEnum.Compress) && !options.Compression.IsNoOp)
+    {
+      if(mode.HasFlag(DataProcessingModeEnum.Encrypt) && !options.Encryption.IsNoOp)
+      {
+        //Compress to a temporary MemoryStream, then encrypt to destination
+        var temp = new MemoryStream();
+        Stream compression_stream = null;
+        
+        try
+        {
+          compression_stream = options.Compression.Compress(temp, leave_open);
+          
+          return new PipelineStream(compression_stream, () => {
+            compression_stream.Flush();
+            compression_stream.Dispose();
+            
+            temp.Position = 0;
+            
+            using var crypto_stream = (CryptoStream)options.Encryption.Encrypt(destination, leave_open);
+            
+            temp.CopyTo(crypto_stream);
+            
+            if(crypto_stream != null)
+              crypto_stream.FlushFinalBlock();
+              
+            temp.Dispose();
+          });
+        }
+        catch
+        {
+          compression_stream?.Dispose();
+          temp?.Dispose();
+          throw;
+        }
+      }
+      else
+      {
+        // Direct compression to destination
+        current = options.Compression.Compress(current, leave_open: leave_open);
+      }
+    }
+    else if(mode.HasFlag(DataProcessingModeEnum.Encrypt) && !options.Encryption.IsNoOp)
+    {
+      var crypto_stream = options.Encryption.Encrypt(current, leave_open: leave_open);
+      
+      current = new PipelineStream(crypto_stream, () => {
+        if(crypto_stream is CryptoStream cs)
+          cs.FlushFinalBlock();
+          
+        crypto_stream.Dispose();
+      });
+    }
+    
+    return current;
+    
+    #endregion    
   }
 
   #endregion
@@ -1554,7 +1745,7 @@ public sealed class LeaveOpenStream : Stream
   protected override void Dispose(bool disposing)
   {
     // Intentially skip disposing the inner stream to keep it open for caller usage.
-    //base.Dispose(disposing);
+    base.Dispose(disposing);
   }
 
   public override bool CanRead  => _inner.CanRead;
@@ -1604,6 +1795,55 @@ public sealed class LeaveOpenStream : Stream
       => _inner.CopyToAsync(destination, bufferSize, cancellationToken);    
 }
 
+public sealed class PipelineStream : Stream
+{
+  private readonly Stream _inner_stream;
+  private readonly Action _on_dispose;
+
+  public PipelineStream(Stream inner_stream, Action on_dispose)
+  {
+    _inner_stream = inner_stream ?? throw new ArgumentNullException(nameof(inner_stream));
+    _on_dispose   = on_dispose   ?? throw new ArgumentNullException(nameof(on_dispose));
+  }
+
+  public override bool CanRead  => _inner_stream.CanRead;
+  public override bool CanSeek  => _inner_stream.CanSeek;
+  public override bool CanWrite => _inner_stream.CanWrite;
+  public override long Length   => _inner_stream.Length;
+  
+  public override long Position
+  {
+    get => _inner_stream.Position;
+    set => _inner_stream.Position = value;
+  }
+
+  public override void Flush()
+    => _inner_stream.Flush();
+    
+  public override int Read(byte[] buffer, int offset, int count)
+    => _inner_stream.Read(buffer, offset, count);
+  
+  public override long Seek(long offset, SeekOrigin origin)
+    => _inner_stream.Seek(offset, origin);
+    
+  public override void SetLength(long value)
+    => _inner_stream.SetLength(value);
+  
+  public override void Write(byte[] buffer, int offset, int count)
+    => _inner_stream.Write(buffer, offset, count);
+
+  protected override void Dispose(bool disposing)
+  {
+    if(disposing)
+    {
+      _on_dispose();
+      _inner_stream.Dispose();
+    }
+    
+    base.Dispose(disposing);
+  }
+}
+
 /// <summary>
 /// Encapsulates optional behaviors for file opterations. Keeps mcsFileUtilities extensible
 /// without overloading its API.
@@ -1640,7 +1880,7 @@ public sealed class mcsFileOptions
   /// Optional compression strategy. If null, no compression is applied.
   /// Example: 
   /// </summary>
-  public ICompressionStrategy Compression { get; set; } = NoCompression.Instance;
+  public ICompressionStrategy Compression { get; set; } = NoCompressionStrategy.Instance;
   
   /// <summary>
   /// Optional encryption strategy. If null, no encryption is applied.
@@ -1803,9 +2043,9 @@ public static class EncryptionFactory
 
 public sealed class NoEncryptionStrategy : IEncryptionStrategy
 {
+  public static NoEncryptionStrategy Instance => new();
   private NoEncryptionStrategy() { }
   
-  public static NoEncryptionStrategy Instance => new();
   public string Name => "None";
   public bool IsNoOp => true;
   
@@ -1818,16 +2058,18 @@ public sealed class NoEncryptionStrategy : IEncryptionStrategy
   {
     if(input  == null)  throw new ArgumentNullException(nameof(input));      
     if(output == null)  throw new ArgumentNullException(nameof(output));
-      
-    input.CopyTo(output);
+    
+    using var destination = Encrypt(output, leave_open: true);
+      input.CopyTo(destination);
   }  
   
   public void Decrypt(Stream input, Stream output)
   {
     if(input  == null)  throw new ArgumentNullException(nameof(input));      
     if(output == null)  throw new ArgumentNullException(nameof(output));
-      
-    input.CopyTo(output);  
+    
+    using var destination = Decrypt(output, leave_open: true);
+      input.CopyTo(destination);
   }
   
   // ---- streaming pipeline (caller owns lifetime) ----
@@ -1934,11 +2176,12 @@ public sealed class AesEncryptionStrategy : IEncryptionStrategy
     var aes = Aes.Create();
     ConfigureKeyAndIV(aes);
 
-    var encryptor = aes.CreateEncryptor();
+    var encryptor = aes.CreateEncryptor(aes.Key, aes.IV);
     
     //NOTE: DO NOT DISPOSE 'aes' or 'encryptor' here; CryptoStream will dispose transform;
     //      we keep 'aes' alive via closure for the lifetime of CryptoStream.
-    return new CryptoStream(destination, encryptor, CryptoStreamMode.Write, leave_open);
+    var crypto_stream = new CryptoStream(destination, encryptor, CryptoStreamMode.Write, leave_open);
+    return crypto_stream;
   }
   
   public Stream Decrypt(Stream source, bool leave_open = true)
@@ -1948,11 +2191,12 @@ public sealed class AesEncryptionStrategy : IEncryptionStrategy
     var aes = Aes.Create();
     ConfigureKeyAndIV(aes);
 
-    var decryptor = aes.CreateDecryptor();
+    var decryptor = aes.CreateDecryptor(aes.Key, aes.IV);
 
     //NOTE: DO NOT DISPOSE 'aes' or 'decryptor' here; CryptoStream will dispose transform;
     //      we keep 'aes' alive via closure for the lifetime of CryptoStream.
-    return new CryptoStream(source, decryptor, CryptoStreamMode.Read, leave_open);
+    var crypto_stream = new CryptoStream(source, decryptor, CryptoStreamMode.Read, leave_open);
+    return crypto_stream;
   }
 
   // --- internal/private helpers ---
@@ -2395,7 +2639,7 @@ public static class CompressionFactory
   {
     return type switch
     {
-       CompressionTypeEnum.NONE   => NoCompression.Instance
+       CompressionTypeEnum.NONE   => NoCompressionStrategy.Instance
       ,CompressionTypeEnum.BROTLI => new BrotliCompressionStrategy()
       ,CompressionTypeEnum.GZIP   => new GZipCompressionStrategy()
       ,_ => throw new ArgumentOutOfRangeException(nameof(type), type, "Unsupported compression type")
@@ -2428,10 +2672,10 @@ public interface ICompressionStrategy
   Stream Decompress(Stream destination, bool leave_open = true);
 }
 
-public sealed class NoCompression : ICompressionStrategy
+public sealed class NoCompressionStrategy : ICompressionStrategy
 {
-  public static readonly NoCompression Instance = new NoCompression();
-  private NoCompression() { }
+  public static readonly NoCompressionStrategy Instance = new();
+  private NoCompressionStrategy() { }
   
   public string Name => nameof(CompressionTypeEnum.NONE);
   public bool IsNoOp => true;
@@ -2445,16 +2689,18 @@ public sealed class NoCompression : ICompressionStrategy
   {
     if(input  == null)  throw new ArgumentNullException(nameof(input));      
     if(output == null)  throw new ArgumentNullException(nameof(output));
-      
-    input.CopyTo(output);  
+    
+    using var destination = Compress(output, leave_open: true);
+      input.CopyTo(destination);
   }  
   
   public void Decompress(Stream input, Stream output)
   {
     if(input  == null)  throw new ArgumentNullException(nameof(input));      
     if(output == null)  throw new ArgumentNullException(nameof(output));
-      
-    input.CopyTo(output);  
+    
+    using var destination = Decompress(output, leave_open: true);
+      input.CopyTo(destination);
   }  
   
   // ---- streaming pipeline (caller owns lifetime) ----
@@ -2625,275 +2871,8 @@ public sealed class BrotliCompressionStrategy : ICompressionStrategy
 public class mcsFileUtilitiesTests : IDisposable
 {
   private readonly string _testRoot;
-  //private readonly mcsFileOptions _defaultOptions = new mcsFileOptions();
-  private readonly mcsFileOptions _defaultOptions = new mcsFileOptions { Encryption  = EncryptionFactory.Create(EncryptionTypeEnum.AES)
-                                                                        ,Compression = CompressionFactory.Create(CompressionTypeEnum.GZIP)
-                                                                        ,AtRest      = DataProcessingModeEnum.Encrypt | DataProcessingModeEnum.Compress
-                                                                        ,InTransit   = DataProcessingModeEnum.Compress };
 
   public mcsFileUtilitiesTests()
-  {
-    _testRoot = Path.Combine(@"C:\temp", "mcsFileUtilitiesTests", Guid.NewGuid().ToString());
-    Directory.CreateDirectory(_testRoot);
-  }
-
-  public void Dispose()
-  {
-    if(Directory.Exists(_testRoot))
-    {
-      try { Directory.Delete(_testRoot, recursive: true); } catch { /* ignore */ }
-    }
-  }
-
-  #region Helpers
-  
-  private string CreateTempFile(string name, string content = null)
-  {
-    var path = Path.Combine(_testRoot, name);
-    
-    if(content != null)
-      File.WriteAllText(path, content, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
-    
-    return path;
-  }
-
-  private string CreateTempFile(string name, byte[] data)
-  {
-    var path = Path.Combine(_testRoot, name);
-    
-    File.WriteAllBytes(path, data);
-    
-    return path;
-  }
-
-  private MemoryStream CreateTempStream(string content)
-      => new MemoryStream(Encoding.UTF8.GetBytes(content));
-
-  private MemoryStream CreateTempStream(byte[] data)
-      => new MemoryStream(data);
-
-  private string ReadFileText(string path)
-      => File.ReadAllText(path, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
-
-  private byte[] ReadFileBytes(string path)
-      => File.ReadAllBytes(path);
-  
-  #endregion
-  
-  #region 📂 File-based methods -------------------------------------------
-  
-  [Fact]
-  public void ReadJsonFile_ShouldBeValidJson()
-  {
-    var _testFile = Path.Combine(@"C:\temp", "integration_test_data.txt");
-
-    Assert.True(File.Exists(_testFile), $"Test data file not found: {_testFile}");
-
-    //var json = File.ReadAllText(_testFile, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
-    var json = mcsFileUtilities.ReadTextFile(_testFile, new mcsFileOptions());
-    using var doc = JsonDocument.Parse(json);
-
-    // ✅ Root properties
-    Assert.Equal("integration_001", doc.RootElement.GetProperty("test_id").GetString());
-    Assert.Equal("Sample data for File Utility integration testing", doc.RootElement.GetProperty("description").GetString());
-
-    // ✅ Content object
-    var content = doc.RootElement.GetProperty("content");
-    Assert.Equal("Hello, world! This is a test string with special chars: @#$%^&*()", content.GetProperty("text").GetString());
-    Assert.Equal("こんにちは 🌟 Привет!", content.GetProperty("unicode").GetString());
-
-    // ✅ Metadata
-    var metadata = content.GetProperty("metadata");
-    Assert.Equal("1KB", metadata.GetProperty("size").GetString());
-    Assert.Equal("2025-09-19T15:53:00Z", metadata.GetProperty("created").GetString());
-    Assert.Contains("file", metadata.GetProperty("tags").EnumerateArray().Select(x => x.GetString()));
-
-    // ✅ Repeated data array
-    var repeated = doc.RootElement.GetProperty("repeated_data").EnumerateArray();
-    Assert.Contains("Line 1: Lorem ipsum dolor sit amet, consectetur adipiscing elit.", repeated.Select(x => x.GetString()));
-  }
-  
-  //------------------------------------------------------------------
-  [Fact]
-  public void ReadTextFile_ShouldReturnContents()
-  {
-    var path = CreateTempFile("text.txt", "hello");
-    
-    var result = mcsFileUtilities.ReadTextFile(path, _defaultOptions);
-    
-    Assert.Equal("hello", result);
-  }
-  
-  [Fact]
-  public void TryReadTextFile_BoolOut_ShouldReturnTrue()
-  {
-    var path = CreateTempFile("text.txt", "hello");
-    var success = mcsFileUtilities.TryReadTextFile(path, out var value, _defaultOptions);
-    Assert.True(success);
-    Assert.Equal("hello", value);
-  }
-  
-  [Fact]
-  public void TryReadTextFile_Smart_ShouldReturnSuccess()
-  {
-    var path = CreateTempFile("text.txt", "hello");
-    var result = mcsFileUtilities.TryReadTextFile(path, _defaultOptions);
-    Assert.True(result.IsSuccess);
-    Assert.Equal("hello", result.Value);
-  }
-  
-  [Fact]
-  public void WriteTextFile_ShouldCreateFile()
-  {
-    var path = Path.Combine(_testRoot, "write.txt");
-    mcsFileUtilities.WriteTextFile(path, "written", _defaultOptions);
-    Assert.Equal("written", ReadFileText(path));
-  }
-  
-  [Fact]
-  public void ReadBinaryFile_ShouldReturnBytes()
-  {
-    var bytes = new byte[] { 1, 2, 3 };
-    var path = CreateTempFile("bin.dat", bytes);
-    var result = mcsFileUtilities.ReadBinaryFile(path, _defaultOptions);
-    Assert.Equal(bytes, result);
-  }
-  
-  [Fact]
-  public void TryReadBinaryFile_BoolOut_ShouldReturnTrue()
-  {
-    var bytes = new byte[] { 9, 8, 7 };
-    var path = CreateTempFile("bin.dat", bytes);
-    var success = mcsFileUtilities.TryReadBinaryFile(path, out var result, _defaultOptions);
-    Assert.True(success);
-    Assert.Equal(bytes, result);
-  }
-  
-  [Fact]
-  public void TryReadBinaryFile_Smart_ShouldReturnSuccess()
-  {
-    var bytes = new byte[] { 9, 8, 7 };
-    var path = CreateTempFile("bin.dat", bytes);
-    var result = mcsFileUtilities.TryReadBinaryFile(path, _defaultOptions);
-    Assert.True(result.IsSuccess);
-    Assert.Equal(bytes, result.Value);
-  }
-  
-  [Fact]
-  public void WriteBinaryFile_ShouldWriteBytes()
-  {
-    var path = Path.Combine(_testRoot, "binout.dat");
-    var data = new byte[] { 4, 5, 6 };
-    mcsFileUtilities.WriteBinaryFile(path, data, _defaultOptions);
-    Assert.Equal(data, ReadFileBytes(path));
-  }
-  
-  #endregion
-  
-  #region 🌊 Stream-based methods -----------------------------------------
-  
-  [Fact]
-  public void ReadTextFromStream_ShouldReturnString()
-  {
-    using var ms = CreateTempStream("stream text");
-    var result = mcsFileUtilities.ReadTextFromStream(ms, _defaultOptions);
-    Assert.Equal("stream text", result);
-  }
-  
-  [Fact]
-  public void TryReadTextFromStream_BoolOut_ShouldReturnTrue()
-  {
-    using var ms = CreateTempStream("try text");
-    var success = mcsFileUtilities.TryReadTextFromStream(ms, _defaultOptions, out var value);
-    Assert.True(success);
-    Assert.Equal("try text", value);
-  }
-  
-  [Fact]
-  public void TryReadTextFromStream_Smart_ShouldReturnSuccess()
-  {
-    using var ms = CreateTempStream("try smart text");
-    var result = mcsFileUtilities.TryReadTextFromStream(ms, _defaultOptions);
-    Assert.True(result.IsSuccess);
-    Assert.Equal("try smart text", result.Value);
-  }
-  
-  [Fact]
-  public void WriteTextToStream_ShouldWriteToMemoryStream()
-  {
-    using var ms = new MemoryStream();
-    mcsFileUtilities.WriteTextToStream(ms, "out text", _defaultOptions);
-    var result = Encoding.UTF8.GetString(ms.ToArray());
-    Assert.Equal("out text", result);
-  }
-  
-  [Fact]
-  public void ReadBinaryFromStream_ShouldReturnBytes()
-  {
-    using var ms = CreateTempStream(new byte[] { 1, 2, 3 });
-    var result = mcsFileUtilities.ReadBinaryFromStream(ms, _defaultOptions);
-    Assert.Equal(new byte[] { 1, 2, 3 }, result);
-  }
-  
-  [Fact]
-  public void TryReadBinaryFromStream_BoolOut_ShouldReturnTrue()
-  {
-    using var ms = CreateTempStream(new byte[] { 9, 8, 7 });
-    var success = mcsFileUtilities.TryReadBinaryFromStream(ms, _defaultOptions, out var result);
-    Assert.True(success);
-    Assert.Equal(new byte[] { 9, 8, 7 }, result);
-  }
-  
-  [Fact]
-  public void TryReadBinaryFromStream_Smart_ShouldReturnSuccess()
-  {
-    using var ms = CreateTempStream(new byte[] { 9, 8, 7 });
-    var result = mcsFileUtilities.TryReadBinaryFromStream(ms, _defaultOptions);
-    Assert.True(result.IsSuccess);
-    Assert.Equal(new byte[] { 9, 8, 7 }, result.Value);
-  }
-  
-  [Fact]
-  public void WriteBinaryToStream_ShouldWriteBytes()
-  {
-    using var ms = new MemoryStream();
-    var data = new byte[] { 4, 5, 6 };
-    mcsFileUtilities.WriteBinaryToStream(ms, data, _defaultOptions);
-    Assert.Equal(data, ms.ToArray());
-  }
-  
-  #endregion
-  
-  #region 🔗 File/Stream bridge methods -----------------------------------
-  
-  [Fact]
-  public void FileFromStream_ShouldWriteStreamToFile()
-  {
-    var dest = Path.Combine(_testRoot, "stream2file.txt");
-    using var input = CreateTempStream("bridge text");
-    mcsFileUtilities.FileFromStream(input, dest, _defaultOptions);
-    Assert.Equal("bridge text", ReadFileText(dest));
-  }
-  
-  [Fact]
-  public void FileToStream_ShouldWriteFileToStream()
-  {
-    var src = CreateTempFile("file2stream.txt", "bridge back");
-    using var ms = new MemoryStream();
-    
-    mcsFileUtilities.FileToStream(src, ms, _defaultOptions);
-    
-    Assert.Equal("bridge back", Encoding.UTF8.GetString(ms.ToArray()));
-  }
-  
-  #endregion
-}
-
-public class mcsFileUtilitiesTests2 : IDisposable
-{
-  private readonly string _testRoot;
-
-  public mcsFileUtilitiesTests2()
   {
     _testRoot = Path.Combine(@"C:\temp", "mcsFileUtilitiesTests", Guid.NewGuid().ToString());
     Directory.CreateDirectory(_testRoot);
@@ -3027,15 +3006,13 @@ public class mcsFileUtilitiesTests2 : IDisposable
   
   #endregion
   
-  #region COMMENTED OUT:
-  
   #region 🌊 Stream-based methods -----------------------------------------
   
   [Theory]
   [InlineData("stream2file_none_none_none_none.txt", "bridge text", DataProcessingModeEnum.None, DataProcessingModeEnum.None, EncryptionTypeEnum.NONE, CompressionTypeEnum.NONE)]
-//  [InlineData("stream2file_enc.txt", "bridge text", DataProcessingModeEnum.Encrypt, DataProcessingModeEnum.Encrypt, EncryptionTypeEnum.AES, CompressionTypeEnum.NONE)]
-//  [InlineData("stream2file_comp.txt", "bridge text", DataProcessingModeEnum.Compress, DataProcessingModeEnum.Compress, EncryptionTypeEnum.NONE, CompressionTypeEnum.GZIP)]
-//  [InlineData("stream2file_enc_comp.txt", "bridge text", DataProcessingModeEnum.Encrypt | DataProcessingModeEnum.Compress, DataProcessingModeEnum.Encrypt | DataProcessingModeEnum.Compress, EncryptionTypeEnum.AES, CompressionTypeEnum.GZIP)]
+  [InlineData("stream2file_enc.txt", "bridge text", DataProcessingModeEnum.Encrypt, DataProcessingModeEnum.Encrypt, EncryptionTypeEnum.AES, CompressionTypeEnum.NONE)]
+  [InlineData("stream2file_comp.txt", "bridge text", DataProcessingModeEnum.Compress, DataProcessingModeEnum.Compress, EncryptionTypeEnum.NONE, CompressionTypeEnum.GZIP)]
+  [InlineData("stream2file_enc_comp.txt", "bridge text", DataProcessingModeEnum.Encrypt | DataProcessingModeEnum.Compress, DataProcessingModeEnum.Encrypt | DataProcessingModeEnum.Compress, EncryptionTypeEnum.AES, CompressionTypeEnum.GZIP)]
   public void FileFromStream_RoundTrip(string file_name, string content, DataProcessingModeEnum at_rest_mode, DataProcessingModeEnum in_transit_mode, EncryptionTypeEnum encryption_type, CompressionTypeEnum compression_type)
   {
     var dest = Path.Combine(_testRoot, file_name);
@@ -3044,10 +3021,18 @@ public class mcsFileUtilitiesTests2 : IDisposable
                                       ,AtRest      = at_rest_mode
                                       ,InTransit   = in_transit_mode
                                       ,Logger      = ConsoleLogger };
+    
+    //Step 1: create an *encoded* input stream
+    using var encoded = new MemoryStream();
+    mcsFileUtilities.WriteTextToStream(encoded, content, options);
+    encoded.Position = 0;
 
-    using var input = CreateTempStream(content);
-    mcsFileUtilities.FileFromStream(input, dest, options);
-    Assert.Equal(content, ReadFileText(dest, options));
+    //Step 2: FileFromStream will decode InTransit -> apply AtRest -> write to file
+    mcsFileUtilities.FileFromStream(encoded, dest, options);
+    
+    //Step 3: read it back to plaintext and assert.
+    var result = ReadFileText(dest, options);
+    Assert.Equal(content, result);
   }
   
   [Theory]
@@ -3056,7 +3041,7 @@ public class mcsFileUtilitiesTests2 : IDisposable
   [InlineData("file2stream_comp_comp_none_gzip.txt", "bridge back", DataProcessingModeEnum.Compress, DataProcessingModeEnum.Compress, EncryptionTypeEnum.NONE, CompressionTypeEnum.GZIP)]
   [InlineData("file2stream_enccomp_enc_aes_gzip.txt", "bridge back", DataProcessingModeEnum.Encrypt | DataProcessingModeEnum.Compress, DataProcessingModeEnum.Encrypt, EncryptionTypeEnum.AES, CompressionTypeEnum.GZIP)]
   [InlineData("file2stream_enccomp_comp_aes_gzip.txt", "bridge back", DataProcessingModeEnum.Encrypt | DataProcessingModeEnum.Compress, DataProcessingModeEnum.Compress, EncryptionTypeEnum.AES, CompressionTypeEnum.GZIP)]
-//  [InlineData("file2stream_enccomp_enccomp_aes_gzip.txt", "bridge back", DataProcessingModeEnum.Encrypt | DataProcessingModeEnum.Compress, DataProcessingModeEnum.Encrypt | DataProcessingModeEnum.Compress, EncryptionTypeEnum.AES, CompressionTypeEnum.GZIP)]
+  [InlineData("file2stream_enccomp_enccomp_aes_gzip.txt", "bridge back", DataProcessingModeEnum.Encrypt | DataProcessingModeEnum.Compress, DataProcessingModeEnum.Encrypt | DataProcessingModeEnum.Compress, EncryptionTypeEnum.AES, CompressionTypeEnum.GZIP)]
   public void FileToStream_RoundTrip(string file_name, string content, DataProcessingModeEnum at_rest_mode, DataProcessingModeEnum in_transit_mode, EncryptionTypeEnum encryption_type, CompressionTypeEnum compression_type)
   {
     var src = CreateTempFile(file_name, content, new mcsFileOptions { Encryption  = EncryptionFactory.Create(encryption_type)
@@ -3078,7 +3063,7 @@ public class mcsFileUtilitiesTests2 : IDisposable
   
   #endregion
   
-  #region 🔗 File/Stream bridge methods -----------------------------------
+  #region COMMENTED OUT: 🔗 File/Stream bridge methods -----------------------------------
   
   //[Fact]
   //public void FileFromStream_ShouldWriteStreamToFile()
@@ -3112,7 +3097,7 @@ public class mcsFileUtilitiesTests2 : IDisposable
   [InlineData("stream text", DataProcessingModeEnum.None, EncryptionTypeEnum.NONE, CompressionTypeEnum.NONE)]
   [InlineData("stream text", DataProcessingModeEnum.Encrypt, EncryptionTypeEnum.AES, CompressionTypeEnum.NONE)]
   [InlineData("stream text", DataProcessingModeEnum.Compress, EncryptionTypeEnum.NONE, CompressionTypeEnum.GZIP)]
-//  [InlineData("stream text", DataProcessingModeEnum.Encrypt | DataProcessingModeEnum.Compress, EncryptionTypeEnum.AES, CompressionTypeEnum.GZIP)]
+  [InlineData("stream text", DataProcessingModeEnum.Encrypt | DataProcessingModeEnum.Compress, EncryptionTypeEnum.AES, CompressionTypeEnum.GZIP)]
   public void StreamText_RoundTrip(string content, DataProcessingModeEnum mode, EncryptionTypeEnum encryption_type, CompressionTypeEnum compression_type)
   {
     var options = new mcsFileOptions { Encryption  = EncryptionFactory.Create(encryption_type)
@@ -3142,7 +3127,7 @@ public class mcsFileUtilitiesTests2 : IDisposable
   [InlineData(new byte[] { 1, 2, 3 }, DataProcessingModeEnum.None, EncryptionTypeEnum.NONE, CompressionTypeEnum.NONE)]
   [InlineData(new byte[] { 1, 2, 3 }, DataProcessingModeEnum.Encrypt, EncryptionTypeEnum.AES, CompressionTypeEnum.NONE)]
   [InlineData(new byte[] { 1, 2, 3 }, DataProcessingModeEnum.Compress, EncryptionTypeEnum.NONE, CompressionTypeEnum.GZIP)]
-//  [InlineData(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 }, DataProcessingModeEnum.Encrypt | DataProcessingModeEnum.Compress, EncryptionTypeEnum.AES, CompressionTypeEnum.GZIP)]
+  [InlineData(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 }, DataProcessingModeEnum.Encrypt | DataProcessingModeEnum.Compress, EncryptionTypeEnum.AES, CompressionTypeEnum.GZIP)]
   public void StreamBinary_RoundTrip(byte[] data, DataProcessingModeEnum in_transit_mode, EncryptionTypeEnum encryption_type, CompressionTypeEnum compression_type)
   {
     var options = new mcsFileOptions { Encryption  = EncryptionFactory.Create(encryption_type)
@@ -3167,8 +3152,6 @@ public class mcsFileUtilitiesTests2 : IDisposable
     Assert.True(tryOutSuccess);
     Assert.Equal(data, tryOutValue);
   }
-  
-  #endregion
   
   #endregion
 }
@@ -3261,6 +3244,22 @@ public class mcsFileUtilitiesPerformanceTests : IDisposable
   [InlineData(5, DataProcessingModeEnum.Encrypt, DataProcessingModeEnum.Encrypt, EncryptionTypeEnum.AES, CompressionTypeEnum.NONE)]
   [InlineData(5, DataProcessingModeEnum.Compress, DataProcessingModeEnum.Compress, EncryptionTypeEnum.NONE, CompressionTypeEnum.GZIP)]
   [InlineData(5, DataProcessingModeEnum.Encrypt | DataProcessingModeEnum.Compress, DataProcessingModeEnum.Encrypt | DataProcessingModeEnum.Compress, EncryptionTypeEnum.AES, CompressionTypeEnum.GZIP)]
+  [InlineData(10, DataProcessingModeEnum.None, DataProcessingModeEnum.None, EncryptionTypeEnum.NONE, CompressionTypeEnum.NONE)]
+  [InlineData(10, DataProcessingModeEnum.Encrypt, DataProcessingModeEnum.Encrypt, EncryptionTypeEnum.AES, CompressionTypeEnum.NONE)]
+  [InlineData(10, DataProcessingModeEnum.Compress, DataProcessingModeEnum.Compress, EncryptionTypeEnum.NONE, CompressionTypeEnum.GZIP)]
+  [InlineData(10, DataProcessingModeEnum.Encrypt | DataProcessingModeEnum.Compress, DataProcessingModeEnum.Encrypt | DataProcessingModeEnum.Compress, EncryptionTypeEnum.AES, CompressionTypeEnum.GZIP)]
+  [InlineData(25, DataProcessingModeEnum.None, DataProcessingModeEnum.None, EncryptionTypeEnum.NONE, CompressionTypeEnum.NONE)]
+  [InlineData(25, DataProcessingModeEnum.Encrypt, DataProcessingModeEnum.Encrypt, EncryptionTypeEnum.AES, CompressionTypeEnum.NONE)]
+  [InlineData(25, DataProcessingModeEnum.Compress, DataProcessingModeEnum.Compress, EncryptionTypeEnum.NONE, CompressionTypeEnum.GZIP)]
+  [InlineData(25, DataProcessingModeEnum.Encrypt | DataProcessingModeEnum.Compress, DataProcessingModeEnum.Encrypt | DataProcessingModeEnum.Compress, EncryptionTypeEnum.AES, CompressionTypeEnum.GZIP)]
+  [InlineData(50, DataProcessingModeEnum.None, DataProcessingModeEnum.None, EncryptionTypeEnum.NONE, CompressionTypeEnum.NONE)]
+  [InlineData(50, DataProcessingModeEnum.Encrypt, DataProcessingModeEnum.Encrypt, EncryptionTypeEnum.AES, CompressionTypeEnum.NONE)]
+  [InlineData(50, DataProcessingModeEnum.Compress, DataProcessingModeEnum.Compress, EncryptionTypeEnum.NONE, CompressionTypeEnum.GZIP)]
+  [InlineData(50, DataProcessingModeEnum.Encrypt | DataProcessingModeEnum.Compress, DataProcessingModeEnum.Encrypt | DataProcessingModeEnum.Compress, EncryptionTypeEnum.AES, CompressionTypeEnum.GZIP)]
+  [InlineData(100, DataProcessingModeEnum.None, DataProcessingModeEnum.None, EncryptionTypeEnum.NONE, CompressionTypeEnum.NONE)]
+  [InlineData(100, DataProcessingModeEnum.Encrypt, DataProcessingModeEnum.Encrypt, EncryptionTypeEnum.AES, CompressionTypeEnum.NONE)]
+  [InlineData(100, DataProcessingModeEnum.Compress, DataProcessingModeEnum.Compress, EncryptionTypeEnum.NONE, CompressionTypeEnum.GZIP)]
+  [InlineData(100, DataProcessingModeEnum.Encrypt | DataProcessingModeEnum.Compress, DataProcessingModeEnum.Encrypt | DataProcessingModeEnum.Compress, EncryptionTypeEnum.AES, CompressionTypeEnum.GZIP)]
   public void FileRoundTrip_WithoutBuffer_PerformanceTest(int file_size_MBs, DataProcessingModeEnum at_rest, DataProcessingModeEnum in_transit, EncryptionTypeEnum encryption, CompressionTypeEnum compression)
   {
     // Arrange
@@ -3310,9 +3309,9 @@ public class mcsFileUtilitiesPerformanceTests : IDisposable
     // Assert
     Console.WriteLine($"[DEBUG] Before ReadBinaryFile: destPath={destPath}");
     var round_trip = mcsFileUtilities.ReadBinaryFile(destPath, options);
-    Assert.Equal(data.Length, round_trip.Length);
     Assert.Equal(data, round_trip);
-    
+    //Assert.Equal(data.Length, round_trip.Length);
+
     // Hash Check
     using var srcFs  = File.OpenRead(srcPath);
     using var destFs = File.OpenRead(destPath);
@@ -3386,46 +3385,38 @@ public class mcsFileUtilitiesPerformanceTests : IDisposable
   }
   
   // Cleanup verification
-  [Fact]
-  public void FileToStream_LeaveOpenBehavior()
+  [Theory]
+  [InlineData(true)]
+  [InlineData(false)]
+  public void FileToStream_LeaveOpenStreamBehavior(bool leave_open)
   {
     var src = Path.Combine(_testRoot, "test.bin");
     var data = new byte[1024];
     new Random(42).NextBytes(data);
+    
     mcsFileUtilities.WriteBinaryFile(src, data, _options);
 
     using var ms = new MemoryStream();
-    mcsFileUtilities.FileToStream(src, ms, _options, leave_open: true);
-    Assert.True(ms.CanSeek, "Stream should remain open with leave_open: true");
-
-    using var ms2 = new MemoryStream();
-    mcsFileUtilities.FileToStream(src, ms2, _options, leave_open: false);
-    Assert.False(ms2.CanSeek, "Stream should be closed with leave_open: false");
-  }
-
-  [Fact(Skip = "LINQPad test runner holds references")]
-  public void FileToStream_MemoryCleanup()
-  {
-    var src = Path.Combine(_testRoot, "test.bin");
-    var data = new byte[1024 * 1024]; // 1MB
+    mcsFileUtilities.FileToStream(src, ms, _options, leave_open);
     
-    new Random(42).NextBytes(data);
-    mcsFileUtilities.WriteBinaryFile(src, data, _options);
-
-    WeakReference msRef;
-    
-    using(var ms = new MemoryStream())
+    if(leave_open)
     {
-      msRef = new WeakReference(ms);
-      mcsFileUtilities.FileToStream(src, ms, _options, leave_open: true);
-      ms.Flush();
-      ms.Position = 0;  //Reset to ensure no pending operations
+      //Stream should remain usable
+      ms.CanRead.ShouldBeTrue();
+      ms.Position.ShouldBeGreaterThan(0);
+      
+      var buffer = ms.ToArray();  //No exception
+      buffer.Length.ShouldBe(data.Length);
     }
-    
-    GC.Collect(2, GCCollectionMode.Forced, true);
-    GC.WaitForPendingFinalizers();
-    GC.Collect(2, GCCollectionMode.Forced, true); // Double GC for LINQPad
-    
-    Assert.False(msRef.IsAlive, "MemoryStream should be collectible");
+    else
+    {
+      //Stream should be disposed -> accessing should throw excpetion
+      Should.Throw<ObjectDisposedException>(() => ms.ReadByte());
+      //Should.Throw<ObjectDisposedException>(() => ms.WriteByte(0x42));
+    }
   }
 }
+
+
+
+
