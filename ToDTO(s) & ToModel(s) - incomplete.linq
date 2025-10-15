@@ -1,50 +1,69 @@
 <Query Kind="Program">
   <NuGetReference>Microsoft.AspNetCore.Http</NuGetReference>
-  <Namespace>Microsoft.AspNetCore.Identity</Namespace>
-  <Namespace>NZWalks.API.Models.Domain</Namespace>
-  <Namespace>NZWalks.API.Models.DTOs</Namespace>
-  <Namespace>System.ComponentModel.DataAnnotations.Schema</Namespace>
-  <Namespace>System.Runtime.CompilerServices</Namespace>
   <Namespace>Microsoft.AspNetCore.Http</Namespace>
   <Namespace>System.ComponentModel.DataAnnotations</Namespace>
+  <Namespace>System.ComponentModel.DataAnnotations.Schema</Namespace>
+  <Namespace>System.Runtime.CompilerServices</Namespace>
 </Query>
 
+#region using statements ...  
+/*
+
+Microsoft.AspNetCore.Identity
+NZWalks.API.Models.Domain
+NZWalks.API.Models.DTOs
+
+*/
+#endregion
+  
 void Main()
 {
+  var temp  = new RegionModel { ID       = Guid.NewGuid()
+                               ,Code     = "ABC"
+                               ,Name     = "I don't know at what to call it now"
+                               ,ImageURL = "http://www.yahoo.com/images/usa.jpg" };
   
+  //var dto   = temp.ToDTO();
+  //var model = dto?.ToModel();
+  
+  var dto   = temp.ToDTO(m => new RegionDTO { ID = m.ID, Code = m.Code, Name = m.Name, ImageURL = m.ImageURL });
+  var model = dto?.ToModel(d => new RegionModel { ID = d.ID, Code = d.Code, Name = d.Name, ImageURL = d.ImageURL });
+  
+  dto.Dump("dto");
+  model.Dump("model");
 }
 
 #region Models/Domain
 
-public class Difficulty
+public class DifficultyModel
 {
   //Database Properties ------------------------------------------------
   public Guid ID      { get; set; }
   public string Name  { get; set; } = string.Empty;
 }
 
-public class Walk
+public class WalkModel
 {
   //Database Properties ------------------------------------------------
-  public Guid ID                { get; set; }
-
-  public string Name            { get; set; } = string.Empty;
-  public string Description     { get; set; } = string.Empty;
-
-  public double LengthInKM      { get; set; }
-
-  public string? ImageURL       { get; set; }
-
-  public Guid DifficultyID      { get; set; }
-  public Guid RegionID          { get; set; }
+  public Guid ID                      { get; set; }
+                                      
+  public string Name                  { get; set; } = string.Empty;
+  public string Description           { get; set; } = string.Empty;
+                                      
+  public double LengthInKM            { get; set; }
+                                      
+  public string? ImageURL             { get; set; }
+                                      
+  public Guid DifficultyID            { get; set; }
+  public Guid RegionID                { get; set; }
 
 
   //Navigation Properties ----------------------------------------------
-  public Difficulty? Difficulty { get; set; }
-  public Region? Region         { get; set; }
+  public DifficultyModel? Difficulty  { get; set; }
+  public RegionModel? Region          { get; set; }
 }
 
-public class Region
+public class RegionModel
 {
   //Database Properties ------------------------------------------------
   public Guid ID          { get; set; }
@@ -55,7 +74,7 @@ public class Region
   public string? ImageURL {  get; set; } = string.Empty;
 }
 
-public class Image
+public class ImageModel
 {
   public Guid ID { get; set; }
 
@@ -288,13 +307,13 @@ public static class DTOExtensions
     return dtos.Select(dto => convert(dto));
   }
   
-  #endregion COMMENTED OUT: contains class constraints ...
+  #endregion contains class constraints ...
   
   #endregion
 
   #region ToDTO(s) -----------------------------------------------------------------------------------------------------------------
 
-  public static DifficultyDTO? ToDTO(this Difficulty model)
+  public static DifficultyDTO? ToDTO(this DifficultyModel model)
   {
     if (model is null) { return null; }
 
@@ -302,7 +321,7 @@ public static class DTOExtensions
                               ,Name         = model.Name };
   }
 
-  public static RegionDTO? ToDTO(this Region model)
+  public static RegionDTO? ToDTO(this RegionModel model)
   {
     if (model is null) { return null; }
 
@@ -312,7 +331,7 @@ public static class DTOExtensions
                           ,ImageURL = model.ImageURL };
   }
 
-  public static WalkDTO? ToDTO(this Walk model)
+  public static WalkDTO? ToDTO(this WalkModel model)
   {
     if (model is null) { return null; }
 
@@ -331,77 +350,141 @@ public static class DTOExtensions
 
   #region ToModel(s) ---------------------------------------------------------------------------------------------------------------
 
-  public static Difficulty? ToModel(this AddDifficultyRequestDTO dto)
+  public static DifficultyModel? ToModel(this AddDifficultyRequestDTO dto)
   {
     if (dto is null) { return null; }
 
-    return new Difficulty { Name = dto.Name };
+    return new DifficultyModel { Name = dto.Name };
   }
 
-  public static Difficulty? ToModel(this UpdateDifficultyRequestDTO dto)
+  public static DifficultyModel? ToModel(this UpdateDifficultyRequestDTO dto)
   {
     if (dto is null) { return null; }
 
-    return new Difficulty { Name = dto.Name };
+    return new DifficultyModel { Name = dto.Name };
   }
 
-  public static Region? ToModel(this AddRegionRequestDTO dto)
+  public static RegionModel? ToModel(this RegionDTO dto)
   {
     if(dto is null) { return null; }
 
-    return new Region { Code      = dto.Code.Trim()
-                       ,Name      = dto.Name.Trim()
-                       ,ImageURL  = dto.ImageURL?.Trim() };
+    return new RegionModel { ID        = dto.ID
+                            ,Code      = dto.Code.Trim()
+                            ,Name      = dto.Name.Trim()
+                            ,ImageURL  = dto.ImageURL?.Trim() };
   }
-
-  public static Region? ToModel(this UpdateRegionRequestDTO dto)
+  
+  public static RegionModel? ToModel(this AddRegionRequestDTO dto)
   {
     if(dto is null) { return null; }
 
-    return new Region { Code      = dto.Code.Trim()
-                       ,Name      = dto.Name.Trim()
-                       ,ImageURL  = dto.ImageURL?.Trim() };
+    return new RegionModel { Code      = dto.Code.Trim()
+                            ,Name      = dto.Name.Trim()
+                            ,ImageURL  = dto.ImageURL?.Trim() };
   }
 
-  public static Walk? ToModel(this AddWalkRequestDTO dto)
+  public static RegionModel? ToModel(this UpdateRegionRequestDTO dto)
+  {
+    if(dto is null) { return null; }
+
+    return new RegionModel { Code      = dto.Code.Trim()
+                            ,Name      = dto.Name.Trim()
+                            ,ImageURL  = dto.ImageURL?.Trim() };
+  }
+
+  public static WalkModel? ToModel(this AddWalkRequestDTO dto)
   {
     if (dto is null) { return null; }
 
-    return new Walk { Name          = dto.Name
-                     ,Description   = dto.Description
-                     ,LengthInKM    = dto.LengthInKM
-                     ,ImageURL      = dto.ImageURL
-                     ,DifficultyID  = dto.DifficultyID
-                     ,Difficulty    = null
-                     ,RegionID      = dto.RegionID 
-                     ,Region        = null };
+    return new WalkModel { Name          = dto.Name
+                          ,Description   = dto.Description
+                          ,LengthInKM    = dto.LengthInKM
+                          ,ImageURL      = dto.ImageURL
+                          ,DifficultyID  = dto.DifficultyID
+                          ,Difficulty    = null
+                          ,RegionID      = dto.RegionID 
+                          ,Region        = null };
   }
 
-  public static Walk? ToModel(this UpdateWalkRequestDTO dto)
+  public static WalkModel? ToModel(this UpdateWalkRequestDTO dto)
   {
     if (dto is null) { return null; }
 
-    return new Walk { Name          = dto.Name
-                     ,Description   = dto.Description
-                     ,LengthInKM    = dto.LengthInKM
-                     ,ImageURL      = dto.ImageURL
-                     ,DifficultyID  = dto.DifficultyID
-                     ,Difficulty    = null
-                     ,RegionID      = dto.RegionID 
-                     ,Region        = null };
+    return new WalkModel { Name          = dto.Name
+                          ,Description   = dto.Description
+                          ,LengthInKM    = dto.LengthInKM
+                          ,ImageURL      = dto.ImageURL
+                          ,DifficultyID  = dto.DifficultyID
+                          ,Difficulty    = null
+                          ,RegionID      = dto.RegionID 
+                          ,Region        = null };
   }
 
-  public static Image? ToModel(this ImageUploadRequestDTO dto) 
+  public static ImageModel? ToModel(this ImageUploadRequestDTO dto) 
   {
     if (dto is null) { return null; }
 
-    return new Image { File             = dto.File
-                      ,FileName         = dto.FileName
-                      ,FileDescription  = dto.FileDescription
-                      ,FileExtension    = Path.GetExtension(dto.File.FileName)
-                                              .ToLower()
-                      ,FileSize         = dto.File.Length };
+    return new ImageModel { File             = dto.File
+                           ,FileName         = dto.FileName
+                           ,FileDescription  = dto.FileDescription
+                           ,FileExtension    = Path.GetExtension(dto.File.FileName)
+                                                   .ToLower()
+                           ,FileSize         = dto.File.Length };
   }
 
   #endregion
+}
+
+public static class FastMapper<TSource, TDest>
+    where TSource : class
+    where TDest   : class, new()
+{
+  public static readonly Func<TSource, TDest> Map = CreateMap();
+
+  private static Func<TSource, TDest> CreateMap()
+  {
+    var source = Expression.Parameter(typeof(TSource), "src");
+    var dest   = Expression.New(typeof(TDest));
+
+    var bindings = typeof(TDest).GetProperties()
+                                .Where(p => p.CanWrite)
+                                .Select(p => { var srcProp = typeof(TSource).GetProperty(p.Name);
+                                               
+                                               if(srcProp != null && srcProp.PropertyType == p.PropertyType)
+                                               {
+                                                 return Expression.Bind(p, Expression.Property(source, srcProp)); 
+                                               }
+                                             
+                                               return null; })
+                                .Where(b => b != null);
+
+    var body = Expression.MemberInit(dest, bindings!);
+    return Expression.Lambda<Func<TSource, TDest>>(body, source).Compile();
+  }
+}
+
+public static class MapperExtensions
+{
+  public static TDest ToDTO<TSource, TDest>(this TSource source)
+      where TSource : class
+      where TDest : class, new()
+  {
+    if (source == null) return null!;
+    return FastMapper<TSource, TDest>.Map(source);
+  }
+
+  public static IEnumerable<TDest> ToDTOs<TSource, TDest>(this IEnumerable<TSource> sources)
+      where TSource : class
+      where TDest : class, new()
+      => sources?.Select(s => s.ToDTO<TSource, TDest>()) ?? Enumerable.Empty<TDest>();
+
+  public static TDest ToModel<TSource, TDest>(this TSource source)
+      where TSource : class
+      where TDest : class, new()
+      => source.ToDTO<TSource, TDest>();
+
+  public static IEnumerable<TDest> ToModels<TSource, TDest>(this IEnumerable<TSource> sources)
+      where TSource : class
+      where TDest : class, new()
+      => sources.ToDTOs<TSource, TDest>();
 }
