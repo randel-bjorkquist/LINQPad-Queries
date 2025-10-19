@@ -1,0 +1,57 @@
+<?xml version="1.0"?>
+<Library>
+  <List>
+    <BookName>Computer Architecture</BookName>
+    <Category>Computers</Category>
+    <Price>125.60</Price>
+    <ReleaseDate>02-10-2015</ReleaseDate>
+  </List>
+  <List>
+    <BookName>Advanced Composite Materials</BookName>
+    <Category>Science</Category>
+    <Price>172.56</Price>
+    <ReleaseDate>15-05-2015</ReleaseDate>
+</List>
+  <List>
+    <BookName>Asp.Net 4 Blue Book</BookName>
+    <Category>Programming</Category>
+    <Price>56.00</Price>
+    <ReleaseDate>06-10-2015</ReleaseDate>
+  </List>
+  <List>
+    <BookName>Stategies Unplugged</BookName>
+    <Category>Science</Category>
+    <Price>99.99</Price>
+    <ReleaseDate>11-08-2015</ReleaseDate>
+  </List>
+  <List>
+    <BookName>Teaching Science</BookName>
+    <Category>Science</Category>
+    <Price>164.10</Price>
+    <ReleaseDate>02-10-2015</ReleaseDate>
+  </List>
+  <List>
+    <BookName>Challenging Times</BookName>
+    <Category>Business</Category>
+    <Price>150.70</Price>
+    <ReleaseDate>11-08-2015</ReleaseDate>
+  </List>
+  <List>
+    <BookName>Circuit Bending</BookName>
+    <Category>Science</Category>
+    <Price>112.00</Price>
+    <ReleaseDate>07-02-2015</ReleaseDate>
+  </List>
+  <List>
+    <BookName>Popular Science</BookName>
+    <Category>Science</Category>
+    <Price>210.40</Price>
+    <ReleaseDate>21-08-2015</ReleaseDate>
+  </List>
+  <List>
+    <BookName>ADOBE Premiere</BookName>
+    <Category>Computers</Category>
+    <Price>62.20</Price>
+    <ReleaseDate>01-10-2015</ReleaseDate>
+  </List>
+</Library>

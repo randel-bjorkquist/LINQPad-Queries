@@ -1,0 +1,431 @@
+<Query Kind="Program">
+  <NuGetReference>Azure.Core</NuGetReference>
+  <NuGetReference>Azure.Identity</NuGetReference>
+  <NuGetReference>Azure.Security.KeyVault.Administration</NuGetReference>
+  <NuGetReference>Azure.Security.KeyVault.Secrets</NuGetReference>
+  <NuGetReference>Newtonsoft.Json</NuGetReference>
+  <Namespace>Azure</Namespace>
+  <Namespace>Azure.Core</Namespace>
+  <Namespace>Azure.Core.Cryptography</Namespace>
+  <Namespace>Azure.Core.Diagnostics</Namespace>
+  <Namespace>Azure.Core.Extensions</Namespace>
+  <Namespace>Azure.Core.GeoJson</Namespace>
+  <Namespace>Azure.Core.Pipeline</Namespace>
+  <Namespace>Azure.Core.Serialization</Namespace>
+  <Namespace>Azure.Identity</Namespace>
+  <Namespace>Azure.Messaging</Namespace>
+  <Namespace>Azure.Security.KeyVault.Administration</Namespace>
+  <Namespace>Azure.Security.KeyVault.Secrets</Namespace>
+  <Namespace>Microsoft.Extensions.Azure</Namespace>
+  <Namespace>Newtonsoft.Json</Namespace>
+  <Namespace>System.Threading.Tasks</Namespace>
+</Query>
+
+void Main(string[] args)
+{
+  var service     = new KeyVaultSecretsService();
+  var show_secret = new Dictionary<string, bool>(){ {MattangVaultSecretNames.DEV_Expiration_Date        ,true } // simply a temp secret, may be deleted at any time
+                                                   ,{MattangVaultSecretNames.DEV_Number_Of_Retries      ,true } // simply a temp secret, may be deleted at any time
+                                                   ,{MattangVaultSecretNames.MLSE_SQL_PROD              ,true }
+                                                   ,{MattangVaultSecretNames.MLSW_SQL_DEV               ,true }
+                                                   ,{MattangVaultSecretNames.Pipeline_Import            ,true }
+                                                   ,{MattangVaultSecretNames.Pipeline_Key_Vault_Access  ,true }
+                                                   ,{MattangVaultSecretNames.SWTX_Salesforce_Sandbox    ,true } };
+  
+  #region GetDevExpirationDate ---------------------------------------------------------------------------------
+  
+  if(show_secret[MattangVaultSecretNames.DEV_Expiration_Date])
+  {
+    var value = service.GetDevExpirationDate()
+                       .Dump("service.GetDevExpirationDate()", 0);
+  }
+
+  #endregion
+
+  #region GetDevExpirationDate ---------------------------------------------------------------------------------
+
+  if(show_secret[MattangVaultSecretNames.DEV_Expiration_Date])
+  {
+    service.GetDevNumberOfRetries()
+           .Dump("service.GetDevNumberOfRetries()", 0);
+  }
+
+  #endregion
+
+  #region GetMlseSqlProd ---------------------------------------------------------------------------------------
+  
+  if(show_secret[MattangVaultSecretNames.MLSE_SQL_PROD])
+  {
+    service.GetMlseSqlProd()
+           .Dump("service.GetMlseSqlProd()", 0);
+  }  
+
+  #endregion
+
+  #region GetMlswSqlDev ----------------------------------------------------------------------------------------
+  
+  if(show_secret[MattangVaultSecretNames.MLSW_SQL_DEV])
+  {
+    service.GetMlswSqlDev()
+           .Dump("service.GetMlswSqlDev()", 0);
+  }  
+  
+  #endregion
+  
+  #region GetPipelineKeyVaultAccess ----------------------------------------------------------------------------
+  
+  if(show_secret[MattangVaultSecretNames.Pipeline_Key_Vault_Access])
+  {
+    service.GetPipelineKeyVaultAccess()
+           .Dump("service.GetPipelineKeyVaultAccess()", 0);
+  }  
+
+  #endregion
+  
+  #region GetPipelineImport ------------------------------------------------------------------------------------
+  
+  if(show_secret[MattangVaultSecretNames.Pipeline_Import])
+  { 
+    service.GetPipelineImport()
+           .Dump("service.GetPipelineImport()", 0);
+  }  
+  
+  #endregion
+  
+  #region GetSWTXSalesforceSandbox -----------------------------------------------------------------------------
+  
+  if(show_secret[MattangVaultSecretNames.SWTX_Salesforce_Sandbox])
+  {    
+    service.GetSWTXSalesforceSandbox()
+           .Dump("service.GetSWTXSalesforceSandbox()", 0);
+  }
+
+  #endregion
+
+  "ALL DONE: unless something is 'awaiting...'".Dump();
+}
+
+#region Service Layer Code ========================================================================================
+
+public abstract class BaseService
+{
+  public static string KeyVaultName => "MattangVault";
+  public static string KeyVaultUrl  => $"https://{KeyVaultName}.vault.azure.net";
+
+  protected static SecretClient client = null;
+
+  protected async Task<string> GetSecret(string secret_name = null)
+  {
+    client ??= new SecretClient( new Uri(KeyVaultUrl)
+                                ,new DefaultAzureCredential() );
+    
+    var secret = await GetSecret(client, secret_name);
+    
+    return secret.HasValue
+            ? secret.Value.Value
+            : null;
+  }
+
+  protected async Task<T> GetSecret<T>(string secret_name = null)
+  {
+    var value = await GetSecret(secret_name);
+
+    return value != null
+            ? JsonConvert.DeserializeObject<T>(value)
+            : default;
+  }
+
+  protected async Task<Azure.Response<KeyVaultSecret>> GetSecret( SecretClient client
+                                                                 ,string secret_name = null )
+  {
+    if (client == null)
+      throw new ArgumentNullException("The client cannot be null!");
+
+    if (string.IsNullOrWhiteSpace(KeyVaultName))
+      throw new ArgumentNullException("The key vault name cannot be null, empty, or contain only whitespaces!");
+
+    if (string.IsNullOrWhiteSpace(secret_name))
+      throw new ArgumentNullException("The secret name cannot be null, empty, or contain only whitespaces!");
+
+    Azure.Response<KeyVaultSecret> secret = null;
+
+    try
+    {
+      Console.Write($"Retrieving the Secret '{secret_name}' from {KeyVaultName} ...");
+
+      secret = await client.GetSecretAsync(secret_name);
+
+      Console.Write("... RETRIEVED");
+    }
+    catch (Exception ex)
+    {
+      throw;
+    }
+
+    return secret;
+  }  
+}
+
+public class KeyVaultSecretsService : BaseService
+{
+#region COMMENTED OUT: ORIGINAL CODE
+//
+//  public static string KeyVaultName => "MattangVault";
+//  public static string KeyVaultUrl  => $"https://{KeyVaultName}.vault.azure.net";
+//
+//  protected static SecretClient client = null;
+//
+#endregion
+
+  public DateOnly GetDevExpirationDate()
+  {
+    var value = GetSecret(MattangVaultSecretNames.DEV_Expiration_Date).GetAwaiter()
+                                                                      .GetResult();
+                                                                      
+    DateOnly.TryParse(value, out var result);
+    
+    //NOTE: when the DateOnly.TryParse method cannot convert the value to a valid DateOnly value
+    //      it returns the value '01/01/0001' ... so if that gets returned, throw the
+    //      ArgumentOutOfRangeException
+    if(result == new DateOnly(1,1,1))
+      throw new ArgumentOutOfRangeException($"ERROR: '{value}' is not a valid DateOnly value.");
+    
+    return result;
+  }
+
+  public int GetDevNumberOfRetries()
+  {
+    var value = GetSecret(MattangVaultSecretNames.DEV_Number_Of_Retries).GetAwaiter()
+                                                                        .GetResult();
+    
+    int.TryParse(value, out var result);
+    
+    //NOTE: when the int.TryParse method cannot convert the value to a valid Integer value
+    //      it returns the value '0' ... so if that gets parsed AND 'value' was not a zero, 
+    //      throw the ArgumentOutOfRangeException
+    if(result.ToString() != value)
+      throw new ArgumentOutOfRangeException($"ERROR: '{value}' is not a valid Integer value.");
+      
+    return result;
+  }
+
+  public DBConnectionModel GetMlseSqlProd()
+  {
+    return GetSecret<DBConnectionModel>(MattangVaultSecretNames.MLSE_SQL_PROD).GetAwaiter()
+                                                                              .GetResult();
+  }
+
+  public DBConnectionModel GetMlswSqlDev()
+  {
+    return GetSecret<DBConnectionModel>(MattangVaultSecretNames.MLSW_SQL_DEV).GetAwaiter()
+                                                                             .GetResult();
+  }
+
+  public string GetPipelineKeyVaultAccess()
+  {
+    return GetSecret(MattangVaultSecretNames.Pipeline_Key_Vault_Access).GetAwaiter()
+                                                                       .GetResult();
+  }
+
+  public string GetPipelineImport()
+  {
+    return GetSecret(MattangVaultSecretNames.Pipeline_Import).GetAwaiter()
+                                                             .GetResult();
+  }
+
+  public SWTXSalesforceModel GetSWTXSalesforceSandbox()
+  {
+    return GetSecret<SWTXSalesforceModel>(MattangVaultSecretNames.SWTX_Salesforce_Sandbox).GetAwaiter()
+                                                                                          .GetResult();
+  }
+
+#region COMMENTED OUT: ORIGINAL CODE
+//
+//  private async Task<string> GetSecret(string secret_name = null)
+//  {
+//    client ??= new SecretClient( new Uri(KeyVaultUrl)
+//                                ,new DefaultAzureCredential() );
+//    
+//    var secret = await GetSecret(client, secret_name);
+//    
+//    return secret.HasValue
+//            ? secret.Value.Value
+//            : null;
+//  }
+//
+//  private async Task<T> GetSecret<T>(string secret_name = null)
+//  {
+//    var value = await GetSecret(secret_name);
+//
+//    return value != null
+//            ? JsonConvert.DeserializeObject<T>(value)
+//            : default;
+//  }
+//
+//  private async Task<Azure.Response<KeyVaultSecret>> GetSecret( SecretClient client
+//                                                               ,string secret_name = null )
+//  {
+//    if (client == null)
+//      throw new ArgumentNullException("The client cannot be null!");
+//
+//    if (string.IsNullOrWhiteSpace(KeyVaultName))
+//      throw new ArgumentNullException("The key vault name cannot be null, empty, or contain only whitespaces!");
+//
+//    if (string.IsNullOrWhiteSpace(secret_name))
+//      throw new ArgumentNullException("The secret name cannot be null, empty, or contain only whitespaces!");
+//
+//    Azure.Response<KeyVaultSecret> secret = null;
+//
+//    try
+//    {
+//      Console.Write($"Retrieving the Secret '{secret_name}' from {KeyVaultName} ...");
+//
+//      secret = await client.GetSecretAsync(secret_name);
+//
+//      Console.Write("... RETRIEVED");
+//    }
+//    catch (Exception ex)
+//    {
+//      throw;
+//    }
+//
+//    return secret;
+//  }
+//
+#endregion
+}
+
+public class DBConnectionModel
+{
+  public string host     { get; set; }
+  public string port     { get; set; }
+  
+  public string database { get; set; }
+  
+  public string username { get; set; }
+  public string password { get; set; }
+}
+
+public class SWTXSalesforceModel
+{
+  public string username                    { get; set; }
+  public string password                    { get; set; }
+  public string consumer_key                { get; set; }
+  public string consumer_secret             { get; set; }
+  
+  public string base_url                    { get; set; }
+  public string connected_app_customer_key  { get; set; }
+  public string jwt_passphrase              { get; set; }
+  
+  public string api_version                 { get; set; }
+  public string is_sandbox                  { get; set; }
+}
+
+#region R&D CODE DISCUSSION
+/*
+
+public class SWTXSalesforceIntegrationModel
+{
+  public string username                    { get; set; }
+  public string password                    { get; set; }
+  public string consumer_key                { get; set; }
+  public string consumer_secret             { get; set; }
+  
+  public string base_url                    { get; set; }
+  public string connected_app_customer_key  { get; set; }
+  public string jwt_passphrase              { get; set; }
+  
+  public string api_version                 { get; set; }
+  public string is_sandbox                  { get; set; }
+}
+
+public class SalesforceConfigurationModel
+{
+  public string username                    { get; set; }
+  public string password                    { get; set; }
+  
+  public string consumer_key                { get; set; }
+  public string consumer_secret             { get; set; }
+  
+  public string base_url                    { get; set; }
+  public string api_version                 { get; set; }
+}
+
+*/
+#endregion
+
+/// <summary>
+/// These are the actual names of the secrets within the MattangVault/Secrets, they are case insensitive.
+/// When adding a new secret, make sure there's an associated entry in Secrets/Models which represent
+/// the secret's "value".
+/// 
+/// Example:
+///   - the values of both 'mlse-sql-prod' and 'mlsw-sql-dev' use the 'DBConnectionModel'
+///   - the value of 'swtx-salesforce-sandbox' uses 'SWTXSalesforceModel'
+/// Exception(s):
+///   - since the values of both 'pipeline-import' and 'pipeline-key-vault-access' are simple strings,
+///     there's no reason to have have to convert it into a model.
+///   - other simple types like, like numeric, "may not" require conversions like the complex types.
+/// </summary>
+public static class MattangVaultSecretNames
+{
+  public static string DEV_Expiration_Date        => nameof(DEV_Expiration_Date).ToLower().Replace('_', '-');
+  public static string DEV_Number_Of_Retries      => nameof(DEV_Number_Of_Retries).ToLower().Replace('_', '-');
+  
+  public static string MLSE_SQL_PROD              => nameof(MLSE_SQL_PROD).ToLower().Replace('_', '-');
+  public static string MLSW_SQL_DEV               => nameof(MLSW_SQL_DEV).ToLower().Replace('_', '-');
+  
+  public static string SWTX_Salesforce_Sandbox    => nameof(SWTX_Salesforce_Sandbox).ToLower().Replace('_', '-');
+  public static string Pipeline_Import            => nameof(Pipeline_Import).ToLower().Replace('_', '-');
+  public static string Pipeline_Key_Vault_Access  => nameof(Pipeline_Key_Vault_Access).ToLower().Replace('_', '-');
+}
+
+#endregion
+
+#region COMMENTED OUT: Sample Code from Azure Portal (includes adds, edits, and deletes)
+/*
+using System;
+using System.Threading.Tasks;
+using Azure.Identity;
+using Azure.Security.KeyVault.Secrets;
+
+namespace key_vault_console_app
+{
+    class Program
+    {
+        static async Task Main(string[] args)
+        {
+            const string secretName = "SECRET_NAME";
+            var keyVaultName = "KV_NAME"
+            var kvUri = $"https://{keyVaultName}.vault.azure.net";
+
+            var client = new SecretClient(new Uri(kvUri), new DefaultAzureCredential());
+
+            var secretValue = "SECRET_VALUE"
+
+            Console.Write($"Creating a secret in {keyVaultName} called '{secretName}' with the value '{secretValue}' ...");
+            await client.SetSecretAsync(secretName, secretValue);
+            Console.WriteLine(" done.");
+
+            Console.WriteLine("Forgetting your secret.");
+            secretValue = string.Empty;
+            Console.WriteLine($"Your secret is '{secretValue}'.");
+
+            Console.WriteLine($"Retrieving your secret from {keyVaultName}.");
+            var secret = await client.GetSecretAsync(secretName);
+            Console.WriteLine($"Your secret is '{secret.Value.Value}'.");
+
+            Console.Write($"Deleting your secret from {keyVaultName} ...");
+            DeleteSecretOperation operation = await client.StartDeleteSecretAsync(secretName);
+            // You only need to wait for completion if you want to purge or recover the secret.
+            await operation.WaitForCompletionAsync();
+            Console.WriteLine(" done.");
+
+            Console.Write($"Purging your secret from {keyVaultName} ...");
+            await client.PurgeDeletedSecretAsync(secretName);
+            Console.WriteLine(" done.");
+        }
+    }
+}
+*/
+#endregion
