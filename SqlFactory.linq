@@ -7,8 +7,8 @@
 </Query>
 
 //NOTE: loading code from other files within 'My Queries"
-#load "EnumerableExtensions\ToCSV Examples"
-#load "EnumerableExtensions\HasItems + IsNullOrEmpty + Random + Chunk"
+#load "Extensions\EnumerableExtensions\ToCSV Examples"
+#load "Extensions\EnumerableExtensions\HasItems + IsNullOrEmpty + Random + Chunk"
 
 void Main()
 {

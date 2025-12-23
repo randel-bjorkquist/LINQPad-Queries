@@ -37,7 +37,7 @@ void Main()
 //      like: emptyList.IsNullOrEmpty() 
 //         or nullList.IsNullOrEmpty() 
 //         or intList.IsNullOrEmpty()
-void IsNullOrEmpty<T>(IEnumerable<T> collection)
+void IsNullOrEmpty<T>(IEnumerable<T>? collection)
 {
   if (collection.IsNullOrEmpty())
     Console.WriteLine("null or empty");
@@ -47,6 +47,6 @@ void IsNullOrEmpty<T>(IEnumerable<T> collection)
 
 public static class IEnumerableExtensions
 {
-  public static bool IsNullOrEmpty<T>(this IEnumerable<T> source)
+  public static bool IsNullOrEmpty<T>(this IEnumerable<T>? source)
     => !(source?.Any() ?? false); // or any other implementation you want
 }
