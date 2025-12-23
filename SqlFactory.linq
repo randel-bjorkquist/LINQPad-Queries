@@ -156,7 +156,6 @@ protected ExpirableFileEntity HydrateFromReader(SqlDataReader reader)
 
 #endregion
 
-
 #region interface(s)
 
 public interface IValidatable

@@ -5,6 +5,11 @@
   <Namespace>System.Threading.Tasks</Namespace>
 </Query>
 
+//NOTE: loading code from other files within 'My Queries"
+#load "DAL\SqlFactory"
+#load "Extensions\EnumerableExtensions\ToCSV Examples"
+#load "Extensions\EnumerableExtensions\HasItems + IsNullOrEmpty + Random + Chunk"
+
 void Main()
 {
   
