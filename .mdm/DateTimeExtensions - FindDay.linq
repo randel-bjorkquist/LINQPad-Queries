@@ -35,16 +35,12 @@ void Main()
 public static class DateTimeExtensions
 {
   public static int FindDay(this DateTime day, DayOfWeekEnum day_of_week, DayOfMonthEnum day_of_month)
-  {
-    return FindDay(day.Year, day.Month, day_of_week, day_of_month);
-  }
+  	=> FindDay(day.Year, day.Month, day_of_week, day_of_month);
 
   public static DateOnly FindDate(this DateTime day, DayOfWeekEnum day_of_week, DayOfMonthEnum day_of_month)
-  {
-    return new DateOnly( day.Year
-                        ,day.Month
-                        ,FindDay(day.Year, day.Month, day_of_week, day_of_month) );
-  }
+  	=> new DateOnly( day.Year
+                    ,day.Month
+                    ,FindDay(day.Year, day.Month, day_of_week, day_of_month) );
 
   //For example to find the day for 2nd Friday, February, 2016
   //  =>call FindDay(2016, 2, DayOfWeek.Friday, 2)
@@ -53,7 +49,7 @@ public static class DateTimeExtensions
     var day       = 0;
     var occurance = 0;
     
-    #region
+    #region CONVERSION: 'DayOfWeek' to 'DayOfWeekEnum' AND 'DayOfMonthEnum' to 'int'
     
     switch(day_of_week)
     {
@@ -117,36 +113,36 @@ public static class DateTimeExtensions
 [Flags]
 public enum DayOfMonthEnum : short
 {
-    Unknown =   0,
-    First   =   1,
-    Second  =   2,
-    Third   =   4,
-    Fourth  =   8,
-    Last    =  16
+   Unknown =   0
+  ,First   =   1
+  ,Second  =   2
+  ,Third   =   4
+  ,Fourth  =   8
+  ,Last    =  16
 }
 
 [Flags]
 public enum DayOfWeekEnum : short
 {
-    Unknown     =   0,
-    Sunday      =   1,
-    Monday      =   2,
-    Tuesday     =   4,
-    Wednesday   =   8,
-    Thursday    =  16,
-    Friday      =  32,
-    Saturday    =  64
+   Unknown    =   0
+  ,Sunday     =   1
+  ,Monday     =   2
+  ,Tuesday    =   4
+  ,Wednesday  =   8
+  ,Thursday   =  16
+  ,Friday     =  32
+  ,Saturday   =  64
 }
 
 [Flags]
 public enum FrequencyEnum : short
 {
-    Unknown         =   0,
-    Yearly          =   1,
-    Monthly         =   2,
-    Weekly          =   4,
-    Daily           =   8,
-    Hourly          =  16,
-    Minutely        =  32,
-    Secondly        =  64
+   Unknown   =   0
+  ,Yearly    =   1
+  ,Monthly   =   2
+  ,Weekly    =   4
+  ,Daily     =   8
+  ,Hourly    =  16
+  ,Minutely  =  32
+  ,Secondly  =  64
 }
