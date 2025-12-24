@@ -13,105 +13,154 @@
 
 async Task Main()
 {
-  var user_repository     = RepositoryFactory.CreateUserRepository();
-  var contact_repository  = RepositoryFactory.CreateContactRepository();
+  #region COMMENTED OUT: 'Contact Repository'
+  /*
   
-  //IEnumerable<ContactEntity> contacts = await contact_repository.GetAllAsync();
-  //contacts.Dump("contact_repository.GetAllAsync()", 0);
-  //
-  //var ids  = new List<int> { 1, 3, 5, 7 };
-  //contacts = await contact_repository.GetByIDsAsync(ids);  
-  //contacts.Dump("contact_repository.GetAllAsync( {1, 3, 5, 7} )", 0);
-  //
-  //var id = ids.Random(1).First();
-  //var contact = await contact_repository.GetByIDAsync(id);
-  //contact.Dump($"contact_repository.GetByIDAsync( {id} )", 0);
+  // ==============================================================================================
+  
+  var contact_repository = RepositoryFactory.CreateContactRepository();
   
   // ----------------------------------------------------------------------------------------------
-  var contact = new ContactEntity { FirstName = "Joe"
-                                   ,LastName  = "Blow"
-                                   ,Email     = "joe.blow@gmail.com"
-                                   ,Company   = "Microsoft"
-                                   ,Title     = "Developer" };
+  IEnumerable<ContactEntity> contacts = await contact_repository.GetAllAsync();
+  contacts.Dump("Current list of 'contacts' retrieve via 'contact_repository.GetAllAsync()'", 0);
   
-  contact.Dump("contact (w/o ID) - before CreateAsync", 0);
+  var ids  = new List<int> { 1, 3, 5, 7 };
+  contacts = await contact_repository.GetByIDsAsync(ids);  
+  contacts.Dump("contact_repository.GetAllAsync( {1, 3, 5, 7} )", 0);
   
-  var result = await contact_repository.InsertAsync(contact);
-  
-  contact.Dump("contact - after CreateAsync", 0);
-  result.Dump("result from CreateAsync", 0);
+  var id = ids.Random(1).First();
+  var contact = await contact_repository.GetByIDAsync(id);
+  contact.Dump($"contact_repository.GetByIDAsync( {id} )", 0);
   
   // ----------------------------------------------------------------------------------------------
-  var id = contact.ID;
+  var new_contact = new ContactEntity { FirstName = "Joe"
+                                       ,LastName  = "Blow"
+                                       ,Email     = "joe.blow@gmail.com"
+                                       ,Company   = "Microsoft"
+                                       ,Title     = "Developer" };
+  
+  new_contact.Dump("new_contact (w/o ID) - before InsertAsync", 1);
+  
+  contact = await contact_repository.InsertAsync(new_contact);
+  
+  contact.Dump("contact - after InsertAsync", 1);
+  
+  // ----------------------------------------------------------------------------------------------
+  var contact_id = contact.ID;
   contact = null;
-  contact.Dump($"contact is null: '{contact is null}'", 0);
-
-  contact = await contact_repository.GetByIDAsync(id);
-  contact.Dump($"contact from GetByIDAsync( {id} )", 0);
+  Console.WriteLine($"contact is null: '{contact is null}'");
+  
+  contact = await contact_repository.GetByIDAsync(contact_id);
+  contact.Dump($"contact from GetByIDAsync( {contact_id} )", 1);
   
   // ----------------------------------------------------------------------------------------------
   contact.Company = "Updated Company";
   
-  var update_successful = await contact_repository.UpdateAsync(contact);
-  update_successful.Dump("update_successful");
-
+  var update_contact_successful = await contact_repository.UpdateAsync(contact);
+  update_contact_successful.Dump("update_contact_successful");
+  
   var updated_contact = await contact_repository.GetByIDAsync(contact.ID);
-  updated_contact.Dump($"updated_contact from GetByIDAsync( {contact.ID} )", 0);
+  updated_contact.Dump($"updated_contact from GetByIDAsync( {contact.ID} )", 1);
   
   // ----------------------------------------------------------------------------------------------
-  var delete_successful = await contact_repository.DeleteAsync(updated_contact.ID);
-  delete_successful.Dump("delete_successful");
+  var delete_contact_successful = await contact_repository.DeleteAsync(updated_contact.ID);
+  delete_contact_successful.Dump("delete_contact_successful");
+  
+  */
+  #endregion
+
+  #region 'User Repository'
+
+  // ==============================================================================================
+  var user_repository = RepositoryFactory.CreateUserRepository();
+  
+  IEnumerable<UserEntity> users = await user_repository.GetAllAsync();
+  users.Dump("Current list of 'users' retrieve via 'user_repository.GetAllAsync()'", 0);
+  
+  var ids  = new List<int> { 1, 3, 5, 7 };
+  users = await user_repository.GetByIDsAsync(ids);  
+  users.Dump("user_repository.GetAllAsync( {1, 3, 5, 7} )", 0);
+  
+  //var id = ids.Random(1).First();
+  //var contact = await contact_repository.GetByIDAsync(id);
+  //contact.Dump($"contact_repository.GetByIDAsync( {id} )", 0);
+  
+  
+  // ----------------------------------------------------------------------------------------------
+  var new_user = new UserEntity { FirstName = "Fred"
+                                 ,LastName  = "Flintstone"
+                                 ,Email     = $"Fred.Flintstone@bedrock.bc" };
+                                 
+  new_user.Dump("new_user (w/o ID) - before InsertAsync", 1);
+  
+  var user = await user_repository.InsertAsync(new_user);
+  
+  user.Dump("user - after InsertAsync");
+
+  // ----------------------------------------------------------------------------------------------
+  var user_id = user.ID;
+  user = null;
+  Console.WriteLine($"user is null: '{user is null}'");
+
+  user = await user_repository.GetByIDAsync(user_id);
+  user.Dump($"user from GetByIDAsync( {user_id} )", 1);
+
+  // ----------------------------------------------------------------------------------------------
+  user.FirstName  = "Barny";
+  user.LastName   = "Rubble";
+  user.Email      = "Barny.Rubble@bedrock.bd";
+
+
+  var update_user_successful = await user_repository.UpdateAsync(user);
+  update_user_successful.Dump("update_user_successful");
+
+  var updated_user = await user_repository.GetByIDAsync(user.ID);
+  updated_user.Dump($"updated_user from GetByIDAsync( {user.ID} )", 1);
+
+  // ----------------------------------------------------------------------------------------------
+  var delete_user_successful = await user_repository.DeleteAsync(updated_user.ID);
+  delete_user_successful.Dump("delete_user_successful");
+
+  #endregion
 }
 
 #region IUserRepository/UserRepository
 
 public interface IUserRepository : IRepository<UserEntity>
 {
-//  Task<IEnumerable<UserEntity>> GetAllAsync(CancellationToken token = default);
-//
-//  Task<UserEntity> GetByIDAsync(int id, CancellationToken token = default);
-//  Task<IEnumerable<UserEntity>> GetByIDsAsync(IEnumerable<int> ids, CancellationToken token = default);
-//
-//  Task<UserEntity> CreateAsync(UserEntity entity, CancellationToken token = default);
-//  
-//  Task UpdateAsync(UserEntity entity, CancellationToken token = default);
-//  Task DeleteAsync(int id, CancellationToken token = default);
 }
 
-public class UserRepository : Repository, IUserRepository
+public class UserRepository : Repository<UserEntity>, IUserRepository
 {
+  protected override string GetAllStoredProcedureName   => "UserGetAll";
+  protected override string GetByIDStoredProcedureName  => "UserGetByID";
+  protected override string InsertStoredProcedureName   => "UserInsert";
+  protected override string UpdateStoredProcedureName   => "UserUpdate";
+  protected override string DeleteStoredProcedureName   => "UserDelete";
+  
   public UserRepository(string db_connection_string)
     : base(db_connection_string) { }
 
-  public Task<IEnumerable<UserEntity>> GetAllAsync(CancellationToken token = default)
+  protected override void AddInsertParameters(DynamicParameters parameters, UserEntity user)
   {
-    throw new NotImplementedException();
+    //Initialized base entity 'parameters' ...
+    base.AddInsertParameters(parameters, user);
+
+    //Add entity specific paramters
+    parameters.Add("@FirstName" ,user.FirstName);
+    parameters.Add("@LastName"  ,user.LastName);
+    parameters.Add("@Email"     ,user.Email);
   }
 
-  public async Task<UserEntity> GetByIDAsync(int id, CancellationToken token = default)
+  protected override void AddUpdateParameters(DynamicParameters parameters, UserEntity user)
   {
-    var results = await GetByIDsAsync([id], ",", token);
-    return results.FirstOrDefault();
-  }
+    //Initialized base entity 'parameters' ...
+    base.AddUpdateParameters(parameters, user);
 
-  public Task<IEnumerable<UserEntity>> GetByIDsAsync(IEnumerable<int> ids, string separator = ",", CancellationToken token = default)
-  {
-    throw new NotImplementedException();
-  }
-
-  public Task<UserEntity> InsertAsync(UserEntity entity, CancellationToken token = default)
-  {
-    throw new NotImplementedException();
-  }
-
-  public Task<bool> UpdateAsync(UserEntity entity, CancellationToken token = default)
-  {
-    throw new NotImplementedException();
-  }
-
-  public Task<bool> DeleteAsync(int id, CancellationToken token = default)
-  {
-    throw new NotImplementedException();
+    //Add entity specific paramters
+    parameters.Add("@FirstName" ,user.FirstName);
+    parameters.Add("@LastName"  ,user.LastName);
+    parameters.Add("@Email"     ,user.Email);
   }
 }
 
@@ -125,11 +174,11 @@ public interface IContactRepository : IRepository<ContactEntity>
 
 public class ContactRepository : Repository<ContactEntity>, IContactRepository
 {
-  protected override string GetAllStoredProcedureName    => "ContactGetAll";
-  protected override string GetByIDsStoredProcedureName  => "ContactGetByID";
-  protected override string InsertStoredProcedureName    => "ContactInsert";
-  protected override string UpdateStoredProcedureName    => "ContactUpdate";
-  protected override string DeleteStoredProcedureName    => "ContactDelete";
+  protected override string GetAllStoredProcedureName   => "ContactGetAll";
+  protected override string GetByIDStoredProcedureName  => "ContactGetByID";
+  protected override string InsertStoredProcedureName   => "ContactInsert";
+  protected override string UpdateStoredProcedureName   => "ContactUpdate";
+  protected override string DeleteStoredProcedureName   => "ContactDelete";
   
   public ContactRepository(string db_connection_string)
     : base(db_connection_string) { }
@@ -199,11 +248,20 @@ public abstract class Repository : IRepository
 
 public abstract class Repository<TEntity> : Repository, IRepository<TEntity> where TEntity : class, IdbEntity
 {
-  protected abstract string GetAllStoredProcedureName    { get; }
-  protected abstract string GetByIDsStoredProcedureName  { get; }
-  protected abstract string InsertStoredProcedureName    { get; }
-  protected abstract string UpdateStoredProcedureName    { get; }
-  protected abstract string DeleteStoredProcedureName    { get; }
+  protected virtual string GetAllStoredProcedureName
+    => throw new NotImplementedException($"{nameof(GetAllStoredProcedureName)} has not been implemented yet.");
+    
+  protected virtual string GetByIDStoredProcedureName
+    => throw new NotImplementedException($"{nameof(GetByIDStoredProcedureName)} has not been implemented yet.");
+    
+  protected virtual string InsertStoredProcedureName
+    => throw new NotImplementedException($"{nameof(InsertStoredProcedureName)} has not been implemented yet.");
+    
+  protected virtual string UpdateStoredProcedureName
+    => throw new NotImplementedException($"{nameof(UpdateStoredProcedureName)} has not been implemented yet.");
+
+  protected virtual string DeleteStoredProcedureName
+    => throw new NotImplementedException($"{nameof(DeleteStoredProcedureName)} has not been implemented yet.");
   
   public Repository(string db_connection_string)
     : base(db_connection_string) { }
@@ -226,7 +284,7 @@ public abstract class Repository<TEntity> : Repository, IRepository<TEntity> whe
     var object_ids  = ids.Join(separator);
     var parameters  = new { IDs = object_ids, separator };
     
-    return await dbConnection.QueryAsync<TEntity>( sql: GetByIDsStoredProcedureName
+    return await dbConnection.QueryAsync<TEntity>( sql: GetByIDStoredProcedureName
                                                   ,param: parameters
                                                   ,commandType: CommandType.StoredProcedure);
   }
@@ -273,7 +331,7 @@ public abstract class Repository<TEntity> : Repository, IRepository<TEntity> whe
     AddDeleteParameters(parameters, id);
     
     await dbConnection.ExecuteAsync( DeleteStoredProcedureName
-                                    ,new { ID = id }
+                                    ,param: parameters
                                     ,commandType: CommandType.StoredProcedure );
     
     return HydrateFromDeleteCommand(parameters);
@@ -286,7 +344,7 @@ public abstract class Repository<TEntity> : Repository, IRepository<TEntity> whe
     parameters.Add( name: "@ID"
                    ,value: entity.ID
                    ,dbType: DbType.Int32
-                   ,direction: ParameterDirection.InputOutput );
+                   ,direction: ParameterDirection.Output );
     
     parameters.Add( name: "@RETURN_VALUE"
                    ,dbType: DbType.Int32
@@ -296,7 +354,7 @@ public abstract class Repository<TEntity> : Repository, IRepository<TEntity> whe
   protected virtual bool HydrateFromInsertCommand(DynamicParameters parameters, TEntity entity)
   {
     //Get outputs ...
-    int id            = parameters.Get<int?>("@ID") ?? -1;
+    int id            = parameters.Get<int>("@ID");
     int return_value  = parameters.Get<int>("@RETURN_VALUE");
 
     //Check for errors
@@ -314,7 +372,7 @@ public abstract class Repository<TEntity> : Repository, IRepository<TEntity> whe
     parameters.Add( name: "@ID"
                    ,value: entity.ID
                    ,dbType: DbType.Int32
-                   ,direction: ParameterDirection.InputOutput );
+                   ,direction: ParameterDirection.Input );
     
     if(entity is dbDeletableEntity deletable_entity)
       parameters.Add( name: "@Deleted"
@@ -330,7 +388,7 @@ public abstract class Repository<TEntity> : Repository, IRepository<TEntity> whe
   protected virtual bool HydrateFromUpdateCommand(DynamicParameters parameters)
   {
     //Get 'RETURN_VALUE' (error codes)
-    int return_value = parameters.Get<int?>("@RETURN_VALUE") ?? 0;
+    int return_value = parameters.Get<int>("@RETURN_VALUE");
 
     // Check error
     if (return_value != 0)
@@ -348,13 +406,13 @@ public abstract class Repository<TEntity> : Repository, IRepository<TEntity> whe
     
     parameters.Add( name: "@RETURN_VALUE"
                    ,dbType: DbType.Int32
-                   ,direction: ParameterDirection.ReturnValue );    
+                   ,direction: ParameterDirection.ReturnValue );
   }
   
   protected virtual bool HydrateFromDeleteCommand(DynamicParameters parameters)
   {
     //Get 'RETURN_VALUE' (error codes)
-    int return_value = parameters.Get<int?>("@RETURN_VALUE") ?? 0;
+    int return_value = parameters.Get<int>("@RETURN_VALUE");
 
     // Check error
     if (return_value != 0)
@@ -368,7 +426,7 @@ public abstract class Repository<TEntity> : Repository, IRepository<TEntity> whe
 
 #endregion
 
-#region Database Entities
+#region abstract Database Interfaces/Entities
 
 public interface IdbEntity
 {
@@ -394,21 +452,26 @@ public abstract class dbDeletableEntity : dbEntity, IdbDeletableEntity
   public virtual bool IsDeleted => Deleted;
 }
 
+#endregion
+
+#region Database Entities
+
 public class UserEntity : dbDeletableEntity
 {
-  public string FirstName { get; set; }
-  public string LastName  { get; set; }
+  public string FirstName { get; set; } = string.Empty;
+  public string LastName  { get; set; } = string.Empty;
+  public string Email     { get; set; } = string.Empty;
 }
 
 public class ContactEntity : dbEntity
 {
   public string FirstName { get; set; } = string.Empty;
-  public string LastName { get; set; } = string.Empty;
+  public string LastName  { get; set; } = string.Empty;
 
-  public string Email { get; set; } = string.Empty;
-  public string Company { get; set; } = string.Empty;
-  public string Title { get; set; } = string.Empty;
-  
+  public string Email     { get; set; } = string.Empty;
+  public string Company   { get; set; } = string.Empty;
+  public string Title     { get; set; } = string.Empty;
+
   public List<AddressEntity> Addresses { get; set; } = [];
 }
 
@@ -451,6 +514,5 @@ private static class RepositoryFactory
   public static IContactRepository CreateContactRepository()
     => new ContactRepository(ConnectionString);
 }
-
 
 #endregion
