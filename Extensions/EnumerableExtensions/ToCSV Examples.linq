@@ -264,7 +264,7 @@ void Main()
   #endregion
 }
 
-public static class EnumerableExtensions
+public static partial class EnumerableExtensions
 {
   public static string? Join<T>(this IEnumerable<T> source)
     => source.Join<T>(',');

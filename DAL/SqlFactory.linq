@@ -14,32 +14,31 @@ void Main()
 {
 }
 
-//public interface ISqlFactory
-//{
-//  SqlConnection BuildSqlConnection(string? settingName = null);
-//  SqlConnection BuildSqlConnection(string server, string database, bool encrypt = true, bool trust_certificate = false);
-//  SqlConnection BuildSqlConnection(string server, string database, string username, string password, bool encrypt = true, bool trust_certificate = false);
-//
-//  SqlCommand BuildSqlCommand(string procedureName, SqlConnection connection);
-//  SqlCommand BuildSqlCommand(string procedureName, SqlConnection connection, SqlTransaction transaction);
-//}
-
-//public class SqlFactory : ISqlFactory
-public static class SqlFactory
+public interface ISqlFactory
 {
-  public static SqlConnection BuildSqlConnection(string server, string database, string username, string password, bool encrypt = true, bool trust_certificate = false)
+  SqlConnection BuildSqlConnection(string? settingName = null);
+  SqlConnection BuildSqlConnection(string server, string database, bool encrypt = true, bool trust_certificate = false);
+  SqlConnection BuildSqlConnection(string server, string database, string username, string password, bool encrypt = true, bool trust_certificate = false);
+
+  SqlCommand BuildSqlCommand(string procedureName, SqlConnection connection);
+  SqlCommand BuildSqlCommand(string procedureName, SqlConnection connection, SqlTransaction transaction);
+}
+
+public class SqlFactory : ISqlFactory
+{
+  public SqlConnection BuildSqlConnection(string server, string database, string username, string password, bool encrypt = true, bool trust_certificate = false)
     => BuildSqlConnection(server, database, username, password, encrypt, trust_certificate, integrated_security: false);
     
-  public static SqlConnection BuildSqlConnection(string server, string database, bool encrypt = true, bool trust_certificate = false)
+  public SqlConnection BuildSqlConnection(string server, string database, bool encrypt = true, bool trust_certificate = false)
     => BuildSqlConnection(server, database, username: null, password: null, encrypt, trust_certificate, integrated_security: true);
   
-  private static SqlConnection BuildSqlConnection( string server
-                                                  ,string database
-                                                  ,string username
-                                                  ,string password
-                                                  ,bool encrypt             = true     // Explicitly disable encryption (false) by overriding the default value (true)
-                                                  ,bool trust_certificate   = false    // Optional: Disable (true) trust server certificate default value (false) if needed (for non-SSL connections)
-                                                  ,bool integrated_security = false )
+  private SqlConnection BuildSqlConnection( string server
+                                           ,string database
+                                           ,string username
+                                           ,string password
+                                           ,bool encrypt             = true     // Explicitly disable encryption (false) by overriding the default value (true)
+                                           ,bool trust_certificate   = false    // Optional: Disable (true) trust server certificate default value (false) if needed (for non-SSL connections)
+                                           ,bool integrated_security = false )
   {
     switch(integrated_security)
     {
@@ -86,15 +85,15 @@ public static class SqlFactory
     return connection;
   }
   
-  public static SqlConnection BuildSqlConnection(string settingName = null)
+  public SqlConnection BuildSqlConnection(string settingName = null)
     => settingName == null
                     ? new SqlConnection(ConfigurationManager.AppSettings["connectionString"])
                     : new SqlConnection(ConfigurationManager.AppSettings[settingName]);
   
-  public static SqlCommand BuildSqlCommand(string procedureName, SqlConnection connection)
+  public SqlCommand BuildSqlCommand(string procedureName, SqlConnection connection)
     => BuildSqlCommand(procedureName, connection, null);
   
-  public static SqlCommand BuildSqlCommand(string procedureName, SqlConnection connection, SqlTransaction transaction)
+  public SqlCommand BuildSqlCommand(string procedureName, SqlConnection connection, SqlTransaction transaction)
   {
     SqlCommand command = transaction == null
                        ? new SqlCommand(procedureName, connection) 
