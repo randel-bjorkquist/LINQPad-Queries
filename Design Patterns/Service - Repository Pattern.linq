@@ -14,63 +14,85 @@
 async Task Main()
 {
   #region COMMENTED OUT: 'Contact Repository'
-  /*
+  /* */
   
   // ==============================================================================================
   
   var contact_repository = RepositoryFactory.CreateContactRepository();
   
   // ----------------------------------------------------------------------------------------------
-  IEnumerable<ContactEntity> contacts = await contact_repository.GetAllAsync();
-  contacts.Dump("Current list of 'contacts' retrieve via 'contact_repository.GetAllAsync()'", 0);
-  
-  var ids  = new List<int> { 1, 3, 5, 7 };
-  contacts = await contact_repository.GetByIDsAsync(ids);  
-  contacts.Dump("contact_repository.GetAllAsync( {1, 3, 5, 7} )", 0);
-  
-  var id = ids.Random(1).First();
-  var contact = await contact_repository.GetByIDAsync(id);
-  contact.Dump($"contact_repository.GetByIDAsync( {id} )", 0);
-  
-  // ----------------------------------------------------------------------------------------------
-  var new_contact = new ContactEntity { FirstName = "Joe"
-                                       ,LastName  = "Blow"
-                                       ,Email     = "joe.blow@gmail.com"
-                                       ,Company   = "Microsoft"
-                                       ,Title     = "Developer" };
-  
-  new_contact.Dump("new_contact (w/o ID) - before InsertAsync", 1);
-  
-  contact = await contact_repository.InsertAsync(new_contact);
-  
-  contact.Dump("contact - after InsertAsync", 1);
+  //IEnumerable<ContactEntity> contacts = await contact_repository.GetAllAsync();
+  //contacts.Dump("Current list of 'contacts' retrieve via 'contact_repository.GetAllAsync()'", 0);
+  //
+  //var ids  = new List<int> { 1, 3, 5, 7 };
+  //contacts = await contact_repository.GetByIDsAsync(ids);  
+  //contacts.Dump("contact_repository.GetAllAsync( {1, 3, 5, 7} )", 0);
+  //
+  //var id = ids.Random(1).First();
+  //var contact = await contact_repository.GetByIDAsync(id);
+  //contact.Dump($"contact_repository.GetByIDAsync( {id} )", 0);
   
   // ----------------------------------------------------------------------------------------------
-  var contact_id = contact.ID;
-  contact = null;
-  Console.WriteLine($"contact is null: '{contact is null}'");
-  
-  contact = await contact_repository.GetByIDAsync(contact_id);
-  contact.Dump($"contact from GetByIDAsync( {contact_id} )", 1);
-  
-  // ----------------------------------------------------------------------------------------------
-  contact.Company = "Updated Company";
-  
-  var update_contact_successful = await contact_repository.UpdateAsync(contact);
-  update_contact_successful.Dump("update_contact_successful");
-  
-  var updated_contact = await contact_repository.GetByIDAsync(contact.ID);
-  updated_contact.Dump($"updated_contact from GetByIDAsync( {contact.ID} )", 1);
+  //var new_contact = new ContactEntity { FirstName = "Joe"
+  //                                     ,LastName  = "Blow"
+  //                                     ,Email     = "joe.blow@gmail.com"
+  //                                     ,Company   = "Microsoft"
+  //                                     ,Title     = "Developer" };
+  //
+  //new_contact.Dump("new_contact (w/o ID) - before InsertAsync", 1);
+  //
+  //contact = await contact_repository.InsertAsync(new_contact);
+  //
+  //contact.Dump("contact - after InsertAsync", 1);
   
   // ----------------------------------------------------------------------------------------------
-  var delete_contact_successful = await contact_repository.DeleteAsync(updated_contact.ID);
-  delete_contact_successful.Dump("delete_contact_successful");
+  //var contact_id = contact.ID;
+  //contact = null;
+  //Console.WriteLine($"contact is null: '{contact is null}'");
+  //
+  //contact = await contact_repository.GetByIDAsync(contact_id);
+  //contact.Dump($"contact from GetByIDAsync( {contact_id} )", 1);
   
-  */
+  // ----------------------------------------------------------------------------------------------
+  //contact.Company = "Updated Company";
+  //
+  //var update_contact_successful = await contact_repository.UpdateAsync(contact);
+  //update_contact_successful.Dump("update_contact_successful");
+  //
+  //var updated_contact = await contact_repository.GetByIDAsync(contact.ID);
+  //updated_contact.Dump($"updated_contact from GetByIDAsync( {contact.ID} )", 1);
+  
+  // ----------------------------------------------------------------------------------------------
+  //var delete_contact_successful = await contact_repository.DeleteAsync(updated_contact.ID);
+  //delete_contact_successful.Dump("delete_contact_successful");
+
+  // ----------------------------------------------------------------------------------------------
+  //NOTE: GetAll, OrderBy 'LastName', Sort 'DESC' ...
+  //var info = new GetAllPaginationDTO(0, "LastName", "DESC", null, null);
+  //
+  //var contacts = await contact_repository.GetAllAsync(info);
+  //contacts.Dump($"contact_repository.GetAllAsync({info})", 0);
+
+  //--------------------------------------------------------------------
+  //NOTE: First Page, PageSize = 2, OrderBy 'LastName', Sort 'DESC' ...
+  //var info = new GetAllPaginationDTO(2, "LastName", "DESC", null, null);
+  //
+  //var contacts = await contact_repository.GetAllAsync(info);
+  //contacts.Dump($"contact_repository.GetAllAsync({info})", 0);
+  
+  //--------------------------------------------------------------------
+  //NOTE: Last Page, PageSize = 2, OrderBy 'LastName', Sort 'DESC', LastID = 6, LastOrderValue = 'Harden' ...
+  var info = new GetAllPaginationDTO(2, "LastName", "DESC", 6, "Harden");
+  
+  var contacts = await contact_repository.GetAllAsync(info);
+  contacts.Dump($"contact_repository.GetAllAsync({info})", 0);
+
+  /* */
   #endregion
 
   #region 'User Repository'
-
+  /*
+  
   // ==============================================================================================
   var user_repository = RepositoryFactory.CreateUserRepository();
   
@@ -120,7 +142,8 @@ async Task Main()
   // ----------------------------------------------------------------------------------------------
   var delete_user_successful = await user_repository.DeleteAsync(updated_user.ID);
   delete_user_successful.Dump("delete_user_successful");
-
+  
+  */
   #endregion
 }
 
@@ -170,10 +193,13 @@ public class UserRepository : Repository<UserEntity>, IUserRepository
 
 public interface IContactRepository : IRepository<ContactEntity>
 {
+  Task<IEnumerable<ContactEntity>> GetAllAsync( GetAllPaginationDTO pagination_info, CancellationToken token = default);
 }
 
 public class ContactRepository : Repository<ContactEntity>, IContactRepository
 {
+  private string GetAllWithPaginationStoredProcedureName => "ContactGetAllWithKeysetPagination";
+  
   protected override string GetAllStoredProcedureName   => "ContactGetAll";
   protected override string GetByIDStoredProcedureName  => "ContactGetByID";
   protected override string InsertStoredProcedureName   => "ContactInsert";
@@ -210,11 +236,52 @@ public class ContactRepository : Repository<ContactEntity>, IContactRepository
     parameters.Add("@Title", contact.Title);
     parameters.Add("@Email", contact.Email);
   }
+  
+  public async Task<IEnumerable<ContactEntity>> GetAllAsync( GetAllPaginationDTO info, CancellationToken token = default)                                                            
+  {
+    var parameters = new DynamicParameters( new { PageSize        = info.PageSize
+                                                 ,OrderByColumn   = info.OrderByColumn
+                                                 ,SortDirection   = info.SortOrder });
+    
+    if(info.LastID is not null)
+      parameters.Add( name: "@LastID"
+                     ,value: info.LastID
+                     ,dbType: DbType.Int32
+                     ,direction: ParameterDirection.Input );
+
+    if(info.LastOrderValue is not null)
+      parameters.Add( name: "@LastOrderValue"
+                     ,value: info.LastOrderValue
+                     ,dbType: DbType.Object
+                     ,direction: ParameterDirection.Input );
+    
+    parameters.Add( name: "@NextLastID"
+                   ,dbType: DbType.Int32
+                   ,direction: ParameterDirection.Output );
+    
+    parameters.Add( name: "@NextLastOrderValue"
+                   ,dbType: DbType.Object
+                   ,direction: ParameterDirection.Output );
+    
+    parameters.Add( name: "@HasMoreRows"
+                   ,dbType: DbType.Boolean
+                   ,direction: ParameterDirection.Output );    
+    
+    var contacts = await dbConnection.QueryAsync<ContactEntity>( GetAllWithPaginationStoredProcedureName
+                                                                ,param: parameters
+                                                                ,commandType: CommandType.StoredProcedure);
+                                                                
+    var next_last_id          = parameters.Get<int>("@NextLastID");
+    var next_last_order_value = parameters.Get<object>("@NextLastOrderValue");
+    var has_more_rows         = parameters.Get<bool>("@HasMoreRows");
+    
+    return contacts;
+  }
 }
 
 #endregion
 
-#region Core Artifacts
+#region Core Repository Artifacts
 
 public interface IRepository
 {
@@ -426,7 +493,19 @@ public abstract class Repository<TEntity> : Repository, IRepository<TEntity> whe
 
 #endregion
 
-#region abstract Database Interfaces/Entities
+#region Core Pagination DTOs
+
+public record GetAllPaginationDTO(int PageSize, string OrderByColumn, string SortOrder, int? LastID = null, object LastOrderValue = null)
+{
+  // New properties populated by repo for next page
+  //public int? NextLastID            { get; init; }
+  //public string? NextLastOrderValue { get; init; }
+  //public bool HasMoreRows           { get; init; }
+}
+
+#endregion
+
+#region Database Interfaces & abstract Entities
 
 public interface IdbEntity
 {
