@@ -68,7 +68,7 @@ async Task Main()
 
   // ----------------------------------------------------------------------------------------------
   //NOTE: GetAll, OrderBy 'LastName', Sort 'SortDirection.DESC' ...
-  var all_contacts_request = new CursorPaginationRequest(0, "ID", SortDirection.ASC, null, null);
+  var all_contacts_request = new CursorPaginationRequest(0, "LastName", SortDirection.DESC, null, null);
   
   var all_contacts = await contact_repository.GetAllAsync(all_contacts_request);
   all_contacts.Dump($"contact_repository.GetAllAsync({all_contacts_request})", 0);
@@ -91,8 +91,11 @@ async Task Main()
   //};
   
   //-------------------------------------------------------------------------------
-  var offset_request  = new OffsetPaginationRequest( PageNumber: 4
-                                                    ,PageSize: 2);
+  var offset_request  = new OffsetPaginationRequest( PageNumber: 1
+                                                    ,PageSize: 5
+                                                    ,OrderByColumn: "LastName"
+                                                    ,SortDirection: SortDirection.DESC );
+                                                    
   var offset_metadata = new OffsetPaginationMetadata(0, 0, 0);
   
   var offset_result = await contact_repository.GetAllAsync(offset_request);
