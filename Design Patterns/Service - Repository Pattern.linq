@@ -67,26 +67,38 @@ async Task Main()
   //delete_contact_successful.Dump("delete_contact_successful");
 
   // ----------------------------------------------------------------------------------------------
-  //NOTE: GetAll, OrderBy 'LastName', Sort 'DESC' ...
-  //var info = new GetAllPaginationDTO(0, "LastName", "DESC", null, null);
-  //
-  //var contacts = await contact_repository.GetAllAsync(info);
-  //contacts.Dump($"contact_repository.GetAllAsync({info})", 0);
-
-  //--------------------------------------------------------------------
-  //NOTE: First Page, PageSize = 2, OrderBy 'LastName', Sort 'DESC' ...
-  //var info = new GetAllPaginationDTO(2, "LastName", "DESC", null, null);
-  //
-  //var contacts = await contact_repository.GetAllAsync(info);
-  //contacts.Dump($"contact_repository.GetAllAsync({info})", 0);
+  //NOTE: GetAll, OrderBy 'LastName', Sort 'SortDirection.DESC' ...
+  var all_contacts_request = new CursorPaginationRequest(0, "ID", SortDirection.ASC, null, null);
   
-  //--------------------------------------------------------------------
-  //NOTE: Last Page, PageSize = 2, OrderBy 'LastName', Sort 'DESC', LastID = 6, LastOrderValue = 'Harden' ...
-  var info = new GetAllPaginationDTO(2, "LastName", "DESC", 6, "Harden");
+  var all_contacts = await contact_repository.GetAllAsync(all_contacts_request);
+  all_contacts.Dump($"contact_repository.GetAllAsync({all_contacts_request})", 0);
   
-  var contacts = await contact_repository.GetAllAsync(info);
-  contacts.Dump($"contact_repository.GetAllAsync({info})", 0);
-
+  //-------------------------------------------------------------------------------
+  //var cursor_request  = new CursorPaginationRequest(3, "LastName", SortDirection.DESC);
+  //var cursor_metadata = new CursorPaginationMetadata(null, null, true);  //NOTE: set 'HasMore' = true to start
+  //
+  //while(cursor_metadata.HasMore)
+  //{    
+  //  var cursor_result = await contact_repository.GetAllAsync(cursor_request);
+  //  cursor_result.Dump($"contact_repository.GetAllAsync({cursor_request})", 0);
+  //  
+  //  cursor_metadata = cursor_result.metadata;
+  //  cursor_request  = new CursorPaginationRequest( cursor_request.PageSize
+  //                                                ,cursor_request.OrderByColumn
+  //                                                ,cursor_request.SortDirection
+  //                                                ,cursor_metadata.NextID
+  //                                                ,cursor_metadata.NextValue );
+  //};
+  
+  //-------------------------------------------------------------------------------
+  var offset_request  = new OffsetPaginationRequest( PageNumber: 4
+                                                    ,PageSize: 2);
+  var offset_metadata = new OffsetPaginationMetadata(0, 0, 0);
+  
+  var offset_result = await contact_repository.GetAllAsync(offset_request);
+  offset_result.Dump($"contact_repository.GetAllAsync({offset_request})", 0);
+  
+  
   /* */
   #endregion
 
@@ -193,12 +205,12 @@ public class UserRepository : Repository<UserEntity>, IUserRepository
 
 public interface IContactRepository : IRepository<ContactEntity>
 {
-  Task<IEnumerable<ContactEntity>> GetAllAsync( GetAllPaginationDTO pagination_info, CancellationToken token = default);
 }
 
 public class ContactRepository : Repository<ContactEntity>, IContactRepository
 {
-  private string GetAllWithPaginationStoredProcedureName => "ContactGetAllWithKeysetPagination";
+  protected override string GetAllWithOffsetPaginationStoredProcedureName => "ContactGetAllWithOffsetPagination";
+  protected override string GetAllWithCursorPaginationStoredProcedureName => "ContactGetAllWithKeysetSeekPagination";
   
   protected override string GetAllStoredProcedureName   => "ContactGetAll";
   protected override string GetByIDStoredProcedureName  => "ContactGetByID";
@@ -236,47 +248,6 @@ public class ContactRepository : Repository<ContactEntity>, IContactRepository
     parameters.Add("@Title", contact.Title);
     parameters.Add("@Email", contact.Email);
   }
-  
-  public async Task<IEnumerable<ContactEntity>> GetAllAsync( GetAllPaginationDTO info, CancellationToken token = default)                                                            
-  {
-    var parameters = new DynamicParameters( new { PageSize        = info.PageSize
-                                                 ,OrderByColumn   = info.OrderByColumn
-                                                 ,SortDirection   = info.SortOrder });
-    
-    if(info.LastID is not null)
-      parameters.Add( name: "@LastID"
-                     ,value: info.LastID
-                     ,dbType: DbType.Int32
-                     ,direction: ParameterDirection.Input );
-
-    if(info.LastOrderValue is not null)
-      parameters.Add( name: "@LastOrderValue"
-                     ,value: info.LastOrderValue
-                     ,dbType: DbType.Object
-                     ,direction: ParameterDirection.Input );
-    
-    parameters.Add( name: "@NextLastID"
-                   ,dbType: DbType.Int32
-                   ,direction: ParameterDirection.Output );
-    
-    parameters.Add( name: "@NextLastOrderValue"
-                   ,dbType: DbType.Object
-                   ,direction: ParameterDirection.Output );
-    
-    parameters.Add( name: "@HasMoreRows"
-                   ,dbType: DbType.Boolean
-                   ,direction: ParameterDirection.Output );    
-    
-    var contacts = await dbConnection.QueryAsync<ContactEntity>( GetAllWithPaginationStoredProcedureName
-                                                                ,param: parameters
-                                                                ,commandType: CommandType.StoredProcedure);
-                                                                
-    var next_last_id          = parameters.Get<int>("@NextLastID");
-    var next_last_order_value = parameters.Get<object>("@NextLastOrderValue");
-    var has_more_rows         = parameters.Get<bool>("@HasMoreRows");
-    
-    return contacts;
-  }
 }
 
 #endregion
@@ -291,6 +262,8 @@ public interface IRepository
 public interface IRepository<TEntity> : IRepository where TEntity : class, IdbEntity
 {
   Task<IEnumerable<TEntity>> GetAllAsync(CancellationToken token = default);
+  Task<OffsetPaginationResponse<TEntity>> GetAllAsync( OffsetPaginationRequest pagination_info, CancellationToken token = default);
+  Task<CursorPaginationResponse<TEntity>> GetAllAsync( CursorPaginationRequest pagination_info, CancellationToken token = default);
 
   Task<TEntity> GetByIDAsync(int id, CancellationToken token = default);
   Task<IEnumerable<TEntity>> GetByIDsAsync(IEnumerable<int> ids, string separator = ",", CancellationToken token = default);
@@ -318,6 +291,12 @@ public abstract class Repository<TEntity> : Repository, IRepository<TEntity> whe
   protected virtual string GetAllStoredProcedureName
     => throw new NotImplementedException($"{nameof(GetAllStoredProcedureName)} has not been implemented yet.");
     
+  protected virtual string GetAllWithOffsetPaginationStoredProcedureName
+    => throw new NotImplementedException($"{nameof(GetAllWithOffsetPaginationStoredProcedureName)} has not been implemented yet.");
+    
+  protected virtual string GetAllWithCursorPaginationStoredProcedureName
+    => throw new NotImplementedException($"{nameof(GetAllWithCursorPaginationStoredProcedureName)} has not been implemented yet.");
+    
   protected virtual string GetByIDStoredProcedureName
     => throw new NotImplementedException($"{nameof(GetByIDStoredProcedureName)} has not been implemented yet.");
     
@@ -338,6 +317,79 @@ public abstract class Repository<TEntity> : Repository, IRepository<TEntity> whe
     var entities = await dbConnection.QueryAsync<TEntity>( GetAllStoredProcedureName
                                                           ,commandType: CommandType.StoredProcedure);
     return entities;
+  }
+
+  public virtual async Task<OffsetPaginationResponse<TEntity>> GetAllAsync( OffsetPaginationRequest request
+                                                                           ,CancellationToken token = default)
+  {
+    var total_rows = "@TotalRows";
+    var parameters = new DynamicParameters( new { PageNumber      = request.PageNumber
+                                                 ,PageSize        = request.PageSize
+                                                 ,OrderByColumn   = request.OrderByColumn
+                                                 ,SortDirection   = request.SortDirection });
+    
+    parameters.Add( name: total_rows
+                   ,dbType: DbType.Int32
+                   ,direction: ParameterDirection.Output );    
+    
+    var entities = await dbConnection.QueryAsync<TEntity>( GetAllWithOffsetPaginationStoredProcedureName
+                                                          ,param: parameters
+                                                          ,commandType: CommandType.StoredProcedure);
+    
+    var metadata = new OffsetPaginationMetadata( TotalRows:   parameters.Get<int>(total_rows)
+                                                ,PageNumber:  request.PageNumber
+                                                ,PageSize:    request.PageSize);
+
+    return new OffsetPaginationResponse<TEntity>(entities, metadata);
+  }
+
+  public virtual async Task<CursorPaginationResponse<TEntity>> GetAllAsync( CursorPaginationRequest request
+                                                                           ,CancellationToken token = default)
+  {
+    var after_id    = "@AfterID";
+    var after_value = "@AfterValue";
+    
+    var next_id     = "@NextID";
+    var next_value  = "@NextValue";
+    var has_more    = "@HasMore";
+    
+    var parameters = new DynamicParameters( new { PageSize        = request.PageSize
+                                                 ,OrderByColumn   = request.OrderByColumn
+                                                 ,SortDirection   = request.SortDirection });
+    
+    if(request.AfterID is not null)
+      parameters.Add( name: after_id
+                     ,value: request.AfterID
+                     ,dbType: DbType.Int32
+                     ,direction: ParameterDirection.Input );
+
+    if(request.AfterValue is not null)
+      parameters.Add( name: after_value
+                     ,value: request.AfterValue
+                     ,dbType: DbType.Object
+                     ,direction: ParameterDirection.Input );
+    
+    parameters.Add( name: next_id
+                   ,dbType: DbType.Int32
+                   ,direction: ParameterDirection.Output );
+    
+    parameters.Add( name: next_value
+                   ,dbType: DbType.Object
+                   ,direction: ParameterDirection.Output );
+    
+    parameters.Add( name: has_more
+                   ,dbType: DbType.Boolean
+                   ,direction: ParameterDirection.Output );    
+    
+    var entities = await dbConnection.QueryAsync<TEntity>( GetAllWithCursorPaginationStoredProcedureName
+                                                          ,param: parameters
+                                                          ,commandType: CommandType.StoredProcedure);
+    
+    var metadata = new CursorPaginationMetadata( NextID:    parameters.Get<int?>(next_id)
+                                                ,NextValue: parameters.Get<object>(next_value)
+                                                ,HasMore:   parameters.Get<bool>(has_more));
+
+    return new CursorPaginationResponse<TEntity>(entities, metadata);
   }
 
   public virtual async Task<TEntity> GetByIDAsync(int id, CancellationToken token = default)
@@ -493,14 +545,25 @@ public abstract class Repository<TEntity> : Repository, IRepository<TEntity> whe
 
 #endregion
 
-#region Core Pagination DTOs
+#region Core Pagination DTOs (Request, Response, Metadata)
 
-public record GetAllPaginationDTO(int PageSize, string OrderByColumn, string SortOrder, int? LastID = null, object LastOrderValue = null)
+public static class SortDirection
 {
-  // New properties populated by repo for next page
-  //public int? NextLastID            { get; init; }
-  //public string? NextLastOrderValue { get; init; }
-  //public bool HasMoreRows           { get; init; }
+  public static string ASC  => "ASC";
+  public static string DESC => "DESC";
+}
+
+public record CursorPaginationRequest(int PageSize = 20, string OrderByColumn = "ID", string SortDirection = "ASC", int? AfterID = null, object AfterValue = null);
+public record CursorPaginationResponse<TEntity>(IEnumerable<TEntity> entities, CursorPaginationMetadata metadata);
+public record CursorPaginationMetadata(int? NextID, object NextValue, bool HasMore);
+
+public record OffsetPaginationRequest(int PageNumber = 1, int PageSize = 20, string OrderByColumn = "ID", string SortDirection = "ASC");
+public record OffsetPaginationResponse<TEntity>(IEnumerable<TEntity> entities, OffsetPaginationMetadata metadata);
+public record OffsetPaginationMetadata(int TotalRows, int PageNumber, int PageSize)
+{
+  public int TotalPages   => (int)Math.Ceiling((double)TotalRows / PageSize);
+  public bool HasPrevious => PageNumber > 1;
+  public bool HasNext     => PageNumber < TotalPages;
 }
 
 #endregion
