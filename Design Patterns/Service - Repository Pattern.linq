@@ -340,7 +340,7 @@ public abstract class Repository<TEntity> : Repository, IRepository<TEntity> whe
                                                           ,commandType: CommandType.StoredProcedure);
     
     var metadata = new OffsetPaginationMetadata( TotalRows:   parameters.Get<int>(total_rows)
-                                                ,PageNumber:  request.PageNumber
+                                                ,CurrentPage: request.PageNumber
                                                 ,PageSize:    request.PageSize);
 
     return new OffsetPaginationResponse<TEntity>(entities, metadata);
@@ -562,11 +562,14 @@ public record CursorPaginationMetadata(int? NextID, object NextValue, bool HasMo
 
 public record OffsetPaginationRequest(int PageNumber = 1, int PageSize = 20, string OrderByColumn = "ID", string SortDirection = "ASC");
 public record OffsetPaginationResponse<TEntity>(IEnumerable<TEntity> entities, OffsetPaginationMetadata metadata);
-public record OffsetPaginationMetadata(int TotalRows, int PageNumber, int PageSize)
+public record OffsetPaginationMetadata(int TotalRows, int CurrentPage, int PageSize)
 {
+  public int PreviousPage => CurrentPage - 1;
+  public int NextPage     => CurrentPage + 1;
   public int TotalPages   => (int)Math.Ceiling((double)TotalRows / PageSize);
-  public bool HasPrevious => PageNumber > 1;
-  public bool HasNext     => PageNumber < TotalPages;
+
+  public bool HasPrevious => CurrentPage > 1;
+  public bool HasNext => CurrentPage < TotalPages;
 }
 
 #endregion
