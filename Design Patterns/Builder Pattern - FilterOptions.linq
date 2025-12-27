@@ -2,59 +2,48 @@
 
 void Main()
 {
-  var filter = new FilterBuilder<UserFilterOptions>()
+  var filter = UserFilterOptions.Builder()
       .WithColumn("Age")
           .GreaterThan(18)
           .LessThan(65)                         // implicit AND
-//          .AndContinue()
-          
-      .WithColumn("Age")
+      .ThenColumn("Age")
           .Between(18, 65, inclusive: true)     // dedicated (preferred)
-//          .AndContinue()
-          
-      .WithColumn("Age")
+      .ThenColumn("Age")
           .Not()
           .Between(18, 65, inclusive: true)     // modifier on complex condition → NOT BETWEEN
-//          .AndContinue()
-          
-      .WithColumn("Status")
+      .ThenColumn("Status")
           .NotEquals("Deleted")                 // dedicated negative
           .Or()
           .Equals("Pending")
-//          .AndContinue()
-          
-      .WithColumn("Email")
+      .ThenColumn("Email")
           .DoesNotContain("spam")               // dedicated
           .Or()
           .ContainsAny("gmail", "yahoo", "hotmail")
-//          .AndContinue()
-          
-      .WithColumn("Role")
+      .ThenColumn("Role")
           .NotIn("Guest", "Banned")             // dedicated
-//          .AndContinue()
-          
-      .WithColumn("FirstName")
+      .ThenColumn("FirstName")
           .Not()                                // modifier style
           .StartsWith("X")
-//          .AndContinue()
-          
-      .WithColumn("CreatedDate")
+      .ThenColumn("CreatedDate")
           .Not()                                // modifier on complex
           .GreaterThan(DateTime.Today.AddDays(-30))
-
+      .End()
       .Build();
-
+  
+  filter.Dump("filter = UserFilterOptions.Builder()", 0);
 
   var user_filter_options = UserFilterOptions.Builder()
       .WithColumn("Status")
           .OrGroup(g => g.Equals("Active")
                          .Or()
                          .Equals("Pending"))
-//          .AndContinue()
-      .WithColumn("Role")
+      .ThenColumn("Role")
           .AndGroup(g => g.Equals("Admin")
                           .Equals("Moderator"))
+      .End()
       .Build();
+      
+  user_filter_options.Dump("user_filter_options = UserFilterOptions.Builder()", 0);
 }
 
 
@@ -130,44 +119,40 @@ public record FilterCondition( object Value
 public class FilterBuilder<TFilter> where TFilter : FilterOptions, new()
 {
   private readonly TFilter _options = new();
-  private string _currentColumn;
   
-  private List<FilterCondition> _currentConditions = new();
-  private LogicalOperator _nextLogical = LogicalOperator.AND;
+  internal string CurrentColumn                     { get; set; }
+  internal List<FilterCondition> CurrentConditions  { get; set; } = new();
+  internal LogicalOperator NextLogical              { get; set; } = LogicalOperator.AND;
+  internal bool NextIsNegated                       { get; set; } = false;
 
   public ColumnFilterBuilder<TFilter> WithColumn(string column)
   {
       CommitCurrentColumn();
       
-      _currentColumn     = column;
-      _currentConditions = new List<FilterCondition>();
-      _nextLogical       = LogicalOperator.AND;
+      CurrentColumn     = column;
+      CurrentConditions = new List<FilterCondition>();
+      NextLogical       = LogicalOperator.AND;
+      NextIsNegated     = false;
       
       return new ColumnFilterBuilder<TFilter>(this);
   }
   
-  public ColumnFilterBuilder<TFilter> ThenColumn(string column) => WithColumn(column);
-//  public ColumnFilterBuilder<TFilter> ThenColumn(string column) => NextColumn(column);
-//  public ColumnFilterBuilder<TFilter> NextColumn(string column)
-//  {
-//    CommitCurrentColumn();
-//    return new ColumnFilterBuilder<TFilter>(this);
-//  }
+  internal void CommitCurrentColumn()
+  {
+    if (CurrentColumn != null && CurrentConditions.Any())
+    {
+      _options.Criteria[CurrentColumn] = CurrentConditions;
+    }
+    
+    CurrentColumn     = null;
+    CurrentConditions = new();
+  }
 
   internal void AddCondition(FilterCondition condition)
   {
-    _currentConditions.Add(condition);
-  }
-
-  internal void CommitCurrentColumn()
-  {
-    if(_currentColumn != null && _currentConditions.Any())
-    {
-      _options.Criteria[_currentColumn] = _currentConditions;
-    }
-    
-    _currentColumn     = null;
-    _currentConditions = new();
+    var effective_op = NextIsNegated ? NegateOperator(condition.Op) : condition.Op;
+    CurrentConditions.Add(condition with { Op = effective_op });
+    NextIsNegated = false;
   }
 
   public TFilter Build()
@@ -180,7 +165,6 @@ public class FilterBuilder<TFilter> where TFilter : FilterOptions, new()
 public class ColumnFilterBuilder<TFilter> where TFilter : FilterOptions, new()
 {
   private readonly FilterBuilder<TFilter> _parent;
-  private bool _nextIsNegated = false;
 
   internal ColumnFilterBuilder(FilterBuilder<TFilter> parent)
   {
@@ -189,11 +173,7 @@ public class ColumnFilterBuilder<TFilter> where TFilter : FilterOptions, new()
 
   private ColumnFilterBuilder<TFilter> AddCondition(object? value, Operator op)
   {
-    var effective_operator = _nextIsNegated ? NegateOperator(op) : op;
-    
-    _parent.AddCondition(new FilterCondition(value, effective_operator));
-    _nextIsNegated = false;
-    
+    _parent.AddCondition(new FilterCondition(value, op));
     return this;
   }
 
@@ -257,13 +237,14 @@ public class ColumnFilterBuilder<TFilter> where TFilter : FilterOptions, new()
 
   public ColumnFilterBuilder<TFilter> Or()
   {
-    _parent.AddCondition(new FilterCondition(null, Operator.Equals, LogicalOperator.OR));
+    //_parent.AddCondition(new FilterCondition(null, Operator.Equals, LogicalOperator.OR));
+    _parent.NextLogical = LogicalOperator.OR;
     return this;
   }
   
   public ColumnFilterBuilder<TFilter> Not()
   {
-    _nextIsNegated = true;
+    _parent.NextIsNegated = true;
     return this;
   }
   
@@ -284,10 +265,29 @@ public class ColumnFilterBuilder<TFilter> where TFilter : FilterOptions, new()
     return this;
   }
 
-// --- End column and continue to next column ---
-//public FilterBuilder<TFilter> AndContinue() => _parent;
-//public FilterBuilder<TFilter> OrContinue()  => _parent;
-//
-//public FilterBuilder<TFilter> NextColumn()  => _parent;
-//public FilterBuilder<TFilter> ThenColumn()  => _parent;
+  // --- End column and continue to next column ---
+  public ColumnFilterBuilder<TFilter> ThenColumn(string column)
+  {
+    // Commit the current column's conditions
+    _parent.CommitCurrentColumn();
+    
+    // Start the new column
+    _parent.CurrentColumn      = column;
+    _parent.CurrentConditions  = new List<FilterCondition>();
+    _parent.NextLogical        = LogicalOperator.AND;
+    _parent.NextIsNegated = false;
+    
+    // Return self - chain continues on the same builder instance
+    return this;
+  }
+  
+  // NEW: Return to parent so .Build() is available
+  public FilterBuilder<TFilter> End()
+  {
+    _parent.CommitCurrentColumn();  // ensures last column is commited
+    return _parent;
+  }
+  
+  // Optional alias for familiarity
+  //public FilterBuilder<TFilter> Build() => End();
 }
