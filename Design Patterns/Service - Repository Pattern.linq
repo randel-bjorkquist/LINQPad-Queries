@@ -13,17 +13,15 @@
 
 async Task Main()
 {
-  #region COMMENTED OUT: 'Contact Repository'
-  /* */
+  #region 'Contact Repository'
   
-  // ==============================================================================================
-  
+  // ==============================================================================================  
   var contact_repository = RepositoryFactory.CreateContactRepository();
   
   // ----------------------------------------------------------------------------------------------
-  //IEnumerable<ContactEntity> contacts = await contact_repository.GetAllAsync();
-  //contacts.Dump("Current list of 'contacts' retrieve via 'contact_repository.GetAllAsync()'", 0);
-  //
+  IEnumerable<ContactEntity> contacts = await contact_repository.GetAllAsync();
+  contacts.Dump("Current list of 'contacts' retrieve via 'contact_repository.GetAllAsync()'", 0);
+  
   //var ids  = new List<int> { 1, 3, 5, 7 };
   //contacts = await contact_repository.GetByIDsAsync(ids);  
   //contacts.Dump("contact_repository.GetAllAsync( {1, 3, 5, 7} )", 0);
@@ -68,108 +66,160 @@ async Task Main()
 
   // ----------------------------------------------------------------------------------------------
   //NOTE: GetAll, OrderBy 'LastName', Sort 'SortDirection.DESC' ...
-  var all_contacts_request = new CursorPaginationRequest(0, "LastName", SortDirection.DESC, null, null);
+  var all_contacts_request = new CursorPaginationRequest( PageSize: 0
+                                                         ,OrderByColumn: "LastName"
+                                                         ,SortDirection: SortDirection.DESC);
   
   var all_contacts = await contact_repository.GetAllAsync(all_contacts_request);
   all_contacts.Dump($"contact_repository.GetAllAsync({all_contacts_request})", 0);
   
   //-------------------------------------------------------------------------------
-  //var cursor_request  = new CursorPaginationRequest(3, "LastName", SortDirection.DESC);
-  //var cursor_metadata = new CursorPaginationMetadata(null, null, true);  //NOTE: set 'HasMore' = true to start
-  //
-  //while(cursor_metadata.HasMore)
-  //{    
-  //  var cursor_result = await contact_repository.GetAllAsync(cursor_request);
-  //  cursor_result.Dump($"contact_repository.GetAllAsync({cursor_request})", 0);
-  //  
-  //  cursor_metadata = cursor_result.metadata;
-  //  cursor_request  = new CursorPaginationRequest( cursor_request.PageSize
-  //                                                ,cursor_request.OrderByColumn
-  //                                                ,cursor_request.SortDirection
-  //                                                ,cursor_metadata.NextID
-  //                                                ,cursor_metadata.NextValue );
-  //};
+  var contact_cursor_request  = new CursorPaginationRequest( PageSize: 3
+                                                            ,OrderByColumn: "LastName"
+                                                            ,SortDirection: SortDirection.DESC );
+  
+  var contact_cursor_metadata = new CursorPaginationMetadata( NextID:    null
+                                                             ,NextValue: null
+                                                             ,HasMore:   true);  //NOTE: set 'HasMore' = true to start
+  
+  while(contact_cursor_metadata.HasMore)
+  {    
+    var contact_cursor_result = await contact_repository.GetAllAsync(contact_cursor_request);
+    contact_cursor_result.Dump($"contact_repository.GetAllAsync({contact_cursor_request})", 0);
+    
+    contact_cursor_metadata = contact_cursor_result.metadata;
+    contact_cursor_request  = new CursorPaginationRequest( contact_cursor_request.PageSize
+                                                          ,contact_cursor_request.OrderByColumn
+                                                          ,contact_cursor_request.SortDirection
+                                                          ,contact_cursor_metadata.NextID
+                                                          ,contact_cursor_metadata.NextValue );
+  };
   
   //-------------------------------------------------------------------------------
-  var offset_request  = new OffsetPaginationRequest( PageNumber: 1
-                                                    ,PageSize: 5
-                                                    ,OrderByColumn: "LastName"
-                                                    ,SortDirection: SortDirection.DESC );
+  var contact_offset_request  = new OffsetPaginationRequest( PageNumber: 1
+                                                            ,PageSize: 5
+                                                            ,OrderByColumn: "LastName"
+                                                            ,SortDirection: SortDirection.DESC );
                                                     
-  var offset_metadata = new OffsetPaginationMetadata(0, 0, 0);
+  //var contact_offset_metadata = new OffsetPaginationMetadata( TotalRows:   0
+  //                                                           ,CurrentPage: 0
+  //                                                           ,PageSize:    0 );
   
-  var offset_result = await contact_repository.GetAllAsync(offset_request);
-  offset_result.Dump($"contact_repository.GetAllAsync({offset_request})", 0);
+  var contact_offset_result = await contact_repository.GetAllAsync(contact_offset_request);
+  contact_offset_result.Dump($"contact_repository.GetAllAsync({contact_offset_request})", 0);
   
-  
-  /* */
   #endregion
 
   #region 'User Repository'
-  /*
   
   // ==============================================================================================
   var user_repository = RepositoryFactory.CreateUserRepository();
-  
+
+  // ----------------------------------------------------------------------------------------------
   IEnumerable<UserEntity> users = await user_repository.GetAllAsync();
   users.Dump("Current list of 'users' retrieve via 'user_repository.GetAllAsync()'", 0);
-  
-  var ids  = new List<int> { 1, 3, 5, 7 };
-  users = await user_repository.GetByIDsAsync(ids);  
-  users.Dump("user_repository.GetAllAsync( {1, 3, 5, 7} )", 0);
-  
-  //var id = ids.Random(1).First();
-  //var contact = await contact_repository.GetByIDAsync(id);
-  //contact.Dump($"contact_repository.GetByIDAsync( {id} )", 0);
-  
+
+  //var ids  = new List<int> { 1, 3, 5, 7 };
+  //users = await user_repository.GetByIDsAsync(ids);  
+  //users.Dump("user_repository.GetAllAsync( {1, 3, 5, 7} )", 0);
+  //
+  ////var id = ids.Random(1).First();
+  ////var contact = await contact_repository.GetByIDAsync(id);
+  ////contact.Dump($"contact_repository.GetByIDAsync( {id} )", 0);
   
   // ----------------------------------------------------------------------------------------------
-  var new_user = new UserEntity { FirstName = "Fred"
-                                 ,LastName  = "Flintstone"
-                                 ,Email     = $"Fred.Flintstone@bedrock.bc" };
-                                 
-  new_user.Dump("new_user (w/o ID) - before InsertAsync", 1);
+  //var new_user = new UserEntity { FirstName = "Fred"
+  //                               ,LastName  = "Flintstone"
+  //                               ,Email     = $"Fred.Flintstone@bedrock.bc" };
+  //                               
+  //new_user.Dump("new_user (w/o ID) - before InsertAsync", 1);
+  //
+  //var user = await user_repository.InsertAsync(new_user);
+  //
+  //user.Dump("user - after InsertAsync");
   
-  var user = await user_repository.InsertAsync(new_user);
+  // ----------------------------------------------------------------------------------------------
+  //var user_id = user.ID;
+  //user = null;
+  //Console.WriteLine($"user is null: '{user is null}'");
+  //
+  //user = await user_repository.GetByIDAsync(user_id);
+  //user.Dump($"user from GetByIDAsync( {user_id} )", 1);
   
-  user.Dump("user - after InsertAsync");
-
   // ----------------------------------------------------------------------------------------------
-  var user_id = user.ID;
-  user = null;
-  Console.WriteLine($"user is null: '{user is null}'");
-
-  user = await user_repository.GetByIDAsync(user_id);
-  user.Dump($"user from GetByIDAsync( {user_id} )", 1);
-
-  // ----------------------------------------------------------------------------------------------
-  user.FirstName  = "Barny";
-  user.LastName   = "Rubble";
-  user.Email      = "Barny.Rubble@bedrock.bd";
-
-
-  var update_user_successful = await user_repository.UpdateAsync(user);
-  update_user_successful.Dump("update_user_successful");
-
-  var updated_user = await user_repository.GetByIDAsync(user.ID);
-  updated_user.Dump($"updated_user from GetByIDAsync( {user.ID} )", 1);
-
-  // ----------------------------------------------------------------------------------------------
-  var delete_user_successful = await user_repository.DeleteAsync(updated_user.ID);
-  delete_user_successful.Dump("delete_user_successful");
+  //user.FirstName  = "Barny";
+  //user.LastName   = "Rubble";
+  //user.Email      = "Barny.Rubble@bedrock.bd";
+  //
+  //var update_user_successful = await user_repository.UpdateAsync(user);
+  //update_user_successful.Dump("update_user_successful");
+  //
+  //var updated_user = await user_repository.GetByIDAsync(user.ID);
+  //updated_user.Dump($"updated_user from GetByIDAsync( {user.ID} )", 1);
   
-  */
+  // ----------------------------------------------------------------------------------------------
+  //var delete_user_successful = await user_repository.DeleteAsync(updated_user.ID);
+  //delete_user_successful.Dump("delete_user_successful");
+  
+  // ----------------------------------------------------------------------------------------------
+  //NOTE: GetAll, OrderBy 'LastName', Sort 'SortDirection.DESC' ...
+  var all_users_request = new CursorPaginationRequest( PageSize: 0
+                                                      ,OrderByColumn: "LastName"
+                                                      ,SortDirection: SortDirection.DESC );
+  
+  var all_users = await user_repository.GetAllAsync(all_users_request);
+  all_users.Dump($"user_repository.GetAllAsync({all_users_request})", 0);
+  
+  //-------------------------------------------------------------------------------
+  var user_cursor_request  = new CursorPaginationRequest( PageSize: 3
+                                                         ,OrderByColumn: "LastName"
+                                                         ,SortDirection: SortDirection.DESC );
+  
+  var user_cursor_metadata = new CursorPaginationMetadata( NextID:    null
+                                                          ,NextValue: null
+                                                          ,HasMore:   true );  //NOTE: set 'HasMore' = true to start
+  
+  while(user_cursor_metadata.HasMore)
+  {    
+    var user_cursor_result = await user_repository.GetAllAsync(user_cursor_request);
+    user_cursor_result.Dump($"user_repository.GetAllAsync({user_cursor_request})", 0);
+    
+    user_cursor_metadata = user_cursor_result.metadata;
+    user_cursor_request  = new CursorPaginationRequest( PageSize:      user_cursor_request.PageSize
+                                                       ,OrderByColumn: user_cursor_request.OrderByColumn
+                                                       ,SortDirection: user_cursor_request.SortDirection
+                                                       ,AfterID:       user_cursor_metadata.NextID
+                                                       ,AfterValue:    user_cursor_metadata.NextValue );
+  };
+  
+  //-------------------------------------------------------------------------------
+  var user_offset_request  = new OffsetPaginationRequest( PageNumber: 1
+                                                         ,PageSize: 3
+                                                         ,OrderByColumn: "LastName"
+                                                         ,SortDirection: SortDirection.DESC );
+                                                    
+  //var offset_metadata = new OffsetPaginationMetadata( TotalRows:   0
+  //                                                   ,CurrentPage: 0
+  //                                                   ,PageSize:    0);
+  
+  var uesr_offset_result = await user_repository.GetAllAsync(user_offset_request);
+  uesr_offset_result.Dump($"user_repository.GetAllAsync({user_offset_request})", 0);
+  
   #endregion
 }
 
 #region IUserRepository/UserRepository
 
-public interface IUserRepository : IRepository<UserEntity>
+public interface IUserRepository<UserEntity> : IRepository<UserEntity>  
+  where UserEntity : class, IdbDeletableEntity
 {
 }
 
-public class UserRepository : Repository<UserEntity>, IUserRepository
+public class UserRepository : Repository<UserEntity>, IUserRepository<UserEntity>
 {
+  protected override string GetAllWithOffsetPaginationStoredProcedureName => "UserGetAllWithOffsetPagination";
+  protected override string GetAllWithCursorPaginationStoredProcedureName => "UserGetAllWithKeysetSeekPagination";
+
   protected override string GetAllStoredProcedureName   => "UserGetAll";
   protected override string GetByIDStoredProcedureName  => "UserGetByID";
   protected override string InsertStoredProcedureName   => "UserInsert";
@@ -200,17 +250,30 @@ public class UserRepository : Repository<UserEntity>, IUserRepository
     parameters.Add("@LastName"  ,user.LastName);
     parameters.Add("@Email"     ,user.Email);
   }
+
+  protected override void AddFilterParameters(DynamicParameters parameters, FilterOptions<UserEntity> filter_options = null)
+  {
+    base.AddFilterParameters(parameters, filter_options);
+
+    if (filter_options is UserFilterOptions options)
+    {
+      //options.IncludeDeletedUsers 
+    }
+      
+    
+  }
 }
 
 #endregion
 
 #region IContactRepository/ContactRepository
 
-public interface IContactRepository : IRepository<ContactEntity>
+public interface IContactRepository<ContactEntity> : IRepository<ContactEntity>
+  where ContactEntity : class, IdbEntity
 {
 }
 
-public class ContactRepository : Repository<ContactEntity>, IContactRepository
+public class ContactRepository : Repository<ContactEntity>, IContactRepository<ContactEntity>
 {
   protected override string GetAllWithOffsetPaginationStoredProcedureName => "ContactGetAllWithOffsetPagination";
   protected override string GetAllWithCursorPaginationStoredProcedureName => "ContactGetAllWithKeysetSeekPagination";
@@ -251,6 +314,11 @@ public class ContactRepository : Repository<ContactEntity>, IContactRepository
     parameters.Add("@Title", contact.Title);
     parameters.Add("@Email", contact.Email);
   }
+
+  protected override void AddFilterParameters(DynamicParameters parameters, FilterOptions<ContactEntity> filter_options = null)
+  {
+    base.AddFilterParameters(parameters, filter_options);
+  }
 }
 
 #endregion
@@ -264,7 +332,7 @@ public interface IRepository
 
 public interface IRepository<TEntity> : IRepository where TEntity : class, IdbEntity
 {
-  Task<IEnumerable<TEntity>> GetAllAsync(CancellationToken token = default);
+  Task<IEnumerable<TEntity>> GetAllAsync(FilterOptions<TEntity> filter_options = default, CancellationToken token = default);
   Task<OffsetPaginationResponse<TEntity>> GetAllAsync( OffsetPaginationRequest pagination_info, CancellationToken token = default);
   Task<CursorPaginationResponse<TEntity>> GetAllAsync( CursorPaginationRequest pagination_info, CancellationToken token = default);
 
@@ -315,9 +383,15 @@ public abstract class Repository<TEntity> : Repository, IRepository<TEntity> whe
   public Repository(string db_connection_string)
     : base(db_connection_string) { }
 
-  public virtual async Task<IEnumerable<TEntity>> GetAllAsync(CancellationToken token = default)
-  {  
+  public virtual async Task<IEnumerable<TEntity>> GetAllAsync(FilterOptions<TEntity> filter_options, CancellationToken token = default)
+  {
+    var parameters = new DynamicParameters();
+    
+    AddFilterParameters(parameters, filter_options);
+    
     var entities = await dbConnection.QueryAsync<TEntity>( GetAllStoredProcedureName
+//                                                          ,param: parameters.ParameterNames.Any() ? parameters : null
+                                                          ,param: parameters
                                                           ,commandType: CommandType.StoredProcedure);
     return entities;
   }
@@ -382,7 +456,7 @@ public abstract class Repository<TEntity> : Repository, IRepository<TEntity> whe
     
     parameters.Add( name: has_more
                    ,dbType: DbType.Boolean
-                   ,direction: ParameterDirection.Output );    
+                   ,direction: ParameterDirection.Output );
     
     var entities = await dbConnection.QueryAsync<TEntity>( GetAllWithCursorPaginationStoredProcedureName
                                                           ,param: parameters
@@ -542,7 +616,13 @@ public abstract class Repository<TEntity> : Repository, IRepository<TEntity> whe
 
     return return_value == 0;
   }
-
+  
+  protected virtual void AddFilterParameters(DynamicParameters parameters, FilterOptions<TEntity> filter_options = default)
+  {
+    //if(filter_options is null) 
+    //  return;
+  }
+  
   #endregion
 }
 
@@ -569,7 +649,22 @@ public record OffsetPaginationMetadata(int TotalRows, int CurrentPage, int PageS
   public int TotalPages   => (int)Math.Ceiling((double)TotalRows / PageSize);
 
   public bool HasPrevious => CurrentPage > 1;
-  public bool HasNext => CurrentPage < TotalPages;
+  public bool HasNext     => CurrentPage < TotalPages;
+}
+
+#endregion
+
+#region FilterOptions
+
+public abstract class FilterOptions<T> where T : class
+{
+  // Base: No-op; features add props like public bool IncludeFoo { get; set; }
+  // Default constructor ensures empty options = no fills
+}
+
+public class UserFilterOptions: FilterOptions<UserEntity>
+{
+  public bool IncludeDeletedUsers { get; set; } = false;
 }
 
 #endregion
@@ -578,8 +673,8 @@ public record OffsetPaginationMetadata(int TotalRows, int CurrentPage, int PageS
 
 public interface IdbEntity
 {
-  int ID      { get; set; }
-  bool IsNew  { get; }
+  int ID { get; set; }
+  bool IsNew { get; }
 }
 
 public abstract class dbEntity : IdbEntity
@@ -656,10 +751,10 @@ private static class RepositoryFactory
                                           ,trust_certificate: true)
                       .ConnectionString;
 
-  public static IUserRepository CreateUserRepository()
+  public static IUserRepository<UserEntity> CreateUserRepository()
     => new UserRepository(ConnectionString);
     
-  public static IContactRepository CreateContactRepository()
+  public static IContactRepository<ContactEntity> CreateContactRepository()
     => new ContactRepository(ConnectionString);
 }
 
