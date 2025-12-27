@@ -8,6 +8,7 @@
 
 //NOTE: loading code from other files within 'My Queries"
 #load "DAL\SqlFactory"
+#load ".\Builder Pattern - FilterOptions"
 #load "Extensions\EnumerableExtensions\ToCSV Examples"
 #load "Extensions\EnumerableExtensions\HasItems + IsNullOrEmpty + Random + Chunk"
 
@@ -330,21 +331,6 @@ public interface IRepository
   public IDbConnection dbConnection { get; }
 }
 
-public interface IRepository<TEntity> : IRepository where TEntity : class, IdbEntity
-{
-  Task<IEnumerable<TEntity>> GetAllAsync(FilterOptions<TEntity> filter_options = default, CancellationToken token = default);
-  Task<OffsetPaginationResponse<TEntity>> GetAllAsync( OffsetPaginationRequest pagination_info, CancellationToken token = default);
-  Task<CursorPaginationResponse<TEntity>> GetAllAsync( CursorPaginationRequest pagination_info, CancellationToken token = default);
-
-  Task<TEntity> GetByIDAsync(int id, CancellationToken token = default);
-  Task<IEnumerable<TEntity>> GetByIDsAsync(IEnumerable<int> ids, string separator = ",", CancellationToken token = default);
-
-  Task<TEntity> InsertAsync(TEntity entity, CancellationToken token = default);
-
-  Task<bool> UpdateAsync(TEntity entity, CancellationToken token = default);
-  Task<bool> DeleteAsync(int id, CancellationToken token = default);
-}
-
 public abstract class Repository : IRepository
 {
   protected readonly IDbConnection _dbConnection;
@@ -357,14 +343,31 @@ public abstract class Repository : IRepository
   public IDbConnection dbConnection { get => _dbConnection; }
 }
 
-public abstract class Repository<TEntity> : Repository, IRepository<TEntity> where TEntity : class, IdbEntity
+public interface IRepository<TEntity> : IRepository 
+  where TEntity : class, IdbEntity
+{
+  Task<IEnumerable<TEntity>> GetAllAsync(FilterOptions filters = default, CancellationToken token = default);
+  Task<OffsetPaginationResponse<TEntity>> GetAllAsync(OffsetPaginationRequest pagination_info, CancellationToken token = default);
+  Task<CursorPaginationResponse<TEntity>> GetAllAsync(CursorPaginationRequest pagination_info, CancellationToken token = default);
+
+  Task<TEntity> GetByIDAsync(int id, CancellationToken token = default);
+  Task<IEnumerable<TEntity>> GetByIDsAsync(IEnumerable<int> ids, string separator = ",", CancellationToken token = default);
+
+  Task<TEntity> InsertAsync(TEntity entity, CancellationToken token = default);
+
+  Task<bool> UpdateAsync(TEntity entity, CancellationToken token = default);
+  Task<bool> DeleteAsync(int id, CancellationToken token = default);
+}
+
+public abstract class Repository<TEntity> : Repository, IRepository<TEntity> 
+  where TEntity : class, IdbEntity
 {
   protected virtual string GetAllStoredProcedureName
     => throw new NotImplementedException($"{nameof(GetAllStoredProcedureName)} has not been implemented yet.");
-    
+
   protected virtual string GetAllWithOffsetPaginationStoredProcedureName
     => throw new NotImplementedException($"{nameof(GetAllWithOffsetPaginationStoredProcedureName)} has not been implemented yet.");
-    
+
   protected virtual string GetAllWithCursorPaginationStoredProcedureName
     => throw new NotImplementedException($"{nameof(GetAllWithCursorPaginationStoredProcedureName)} has not been implemented yet.");
     
@@ -383,11 +386,11 @@ public abstract class Repository<TEntity> : Repository, IRepository<TEntity> whe
   public Repository(string db_connection_string)
     : base(db_connection_string) { }
 
-  public virtual async Task<IEnumerable<TEntity>> GetAllAsync(FilterOptions<TEntity> filter_options, CancellationToken token = default)
+  public virtual async Task<IEnumerable<TEntity>> GetAllAsync(FilterOptions filters, CancellationToken token = default)
   {
     var parameters = new DynamicParameters();
     
-    AddFilterParameters(parameters, filter_options);
+    AddFilterParameters(parameters, filters);
     
     var entities = await dbConnection.QueryAsync<TEntity>( GetAllStoredProcedureName
 //                                                          ,param: parameters.ParameterNames.Any() ? parameters : null
@@ -395,7 +398,7 @@ public abstract class Repository<TEntity> : Repository, IRepository<TEntity> whe
                                                           ,commandType: CommandType.StoredProcedure);
     return entities;
   }
-
+  
   public virtual async Task<OffsetPaginationResponse<TEntity>> GetAllAsync( OffsetPaginationRequest request
                                                                            ,CancellationToken token = default)
   {
@@ -617,10 +620,27 @@ public abstract class Repository<TEntity> : Repository, IRepository<TEntity> whe
     return return_value == 0;
   }
   
-  protected virtual void AddFilterParameters(DynamicParameters parameters, FilterOptions<TEntity> filter_options = default)
+  protected virtual void AddFilterParameters(DynamicParameters parameters, FilterOptions filters)
   {
-    //if(filter_options is null) 
-    //  return;
+    if(filters?.Criteria == null || !filters.Criteria.Any()) 
+      return;
+
+    int index = 0;
+    
+    foreach(var kvp in filters.Criteria)
+    {
+      string column  = kvp.Key; // Whitelist in derived if needed
+      var conditions = kvp.Value;
+
+      foreach(var cond in conditions)
+      {
+        string paramName = $"@F{index++}";
+        parameters.Add(paramName, cond.Value);
+
+        // In proc: map Operator + Logical to SQL (dynamic or static)
+        // Example: column = @F0 for Equals, column <> @F0 for NotEquals, etc.
+      }
+    }
   }
   
   #endregion
@@ -656,15 +676,20 @@ public record OffsetPaginationMetadata(int TotalRows, int CurrentPage, int PageS
 
 #region FilterOptions
 
-public abstract class FilterOptions<T> where T : class
+public class UserFilterOptions: FilterOptions<UserEntity>
+//public record UserFilterOptions: FilterOptions
 {
-  // Base: No-op; features add props like public bool IncludeFoo { get; set; }
-  // Default constructor ensures empty options = no fills
+  // Strongly-typed helper (optional but nice)
+  //public static FilterBuilder<UserFilterOptions> Builder() => new();
+  
+  public bool IncludeDeletedUsers { get; set; } = false;
 }
 
-public class UserFilterOptions: FilterOptions<UserEntity>
+public class ContactFilterOptions : FilterOptions<ContactEntity>
+//public record ContactFilterOptions : FilterOptions
 {
-  public bool IncludeDeletedUsers { get; set; } = false;
+  // Strongly-typed helper (optional but nice)
+  //public static FilterBuilder<ContactFilterOptions> Builder() => new();  
 }
 
 #endregion
