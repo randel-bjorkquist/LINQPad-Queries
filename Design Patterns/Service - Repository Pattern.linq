@@ -229,16 +229,19 @@ async Task Main()
   //FilterOptions contact_filter_options = new FilterBuilder().WithColumn("LastName").Contains("u")
   //                                                          .And()
   //                                                          .ThenColumn("LastName").Contains("v");
-
+  
+  
+  contact_filter_options.Dump("contact_filter_options", 0);
   IEnumerable<ContactEntity> contacts = await contact_repository.GetAllAsync(contact_filter_options);
-  contacts.Dump("Current list of 'contacts' retrieve via 'contact_repository.GetAllAsync()'", 0);
+  contacts.Dump($"Current list of 'contacts' retrieve via 'contact_repository.GetAllAsync({contact_filter_options})'", 0);
 
   //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~  
   //FilterOptions user_filter_options = null;
   FilterOptions user_filter_options = new FilterBuilder().WithColumn("ID").Equals(3);
   
+  user_filter_options.Dump("user_filter_options", 0);
   IEnumerable<UserEntity> users = await user_repository.GetAllAsync(user_filter_options);
-  users.Dump("Current list of 'users' retrieve via 'user_repository.GetAllAsync()'", 0);
+  users.Dump($"Current list of 'users' retrieve via 'user_repository.GetAllAsync({user_filter_options})'", 0);
 
 }
 
