@@ -252,7 +252,7 @@ public class UserRepository : Repository<UserEntity>, IUserRepository<UserEntity
     parameters.Add("@Email"     ,user.Email);
   }
 
-  protected override void AddFilterParameters(DynamicParameters parameters, FilterOptions<UserEntity> filter_options = null)
+  protected override void AddFilterParameters(DynamicParameters parameters, FilterOptions filter_options = null)
   {
     base.AddFilterParameters(parameters, filter_options);
 
@@ -316,7 +316,7 @@ public class ContactRepository : Repository<ContactEntity>, IContactRepository<C
     parameters.Add("@Email", contact.Email);
   }
 
-  protected override void AddFilterParameters(DynamicParameters parameters, FilterOptions<ContactEntity> filter_options = null)
+  protected override void AddFilterParameters(DynamicParameters parameters, FilterOptions filter_options = null)
   {
     base.AddFilterParameters(parameters, filter_options);
   }
@@ -676,7 +676,7 @@ public record OffsetPaginationMetadata(int TotalRows, int CurrentPage, int PageS
 
 #region FilterOptions
 
-public class UserFilterOptions: FilterOptions<UserEntity>
+public class UserFilterOptions: FilterOptions
 //public record UserFilterOptions: FilterOptions
 {
   // Strongly-typed helper (optional but nice)
@@ -685,7 +685,7 @@ public class UserFilterOptions: FilterOptions<UserEntity>
   public bool IncludeDeletedUsers { get; set; } = false;
 }
 
-public class ContactFilterOptions : FilterOptions<ContactEntity>
+public class ContactFilterOptions : FilterOptions
 //public record ContactFilterOptions : FilterOptions
 {
   // Strongly-typed helper (optional but nice)

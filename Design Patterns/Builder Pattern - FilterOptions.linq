@@ -92,13 +92,6 @@ public record FilterCondition( object Value
                               ,Operator Op
                               ,LogicalOperator Logical = LogicalOperator.AND );
 
-
-public abstract class FilterOptions<T> where T : class
-{
-  // Base: No-op; features add props like public bool IncludeFoo { get; set; }
-  // Default constructor ensures empty options = no fills
-}
-
 public class FilterOptions
 {
   // Key = column name, Value = list of conditions for that column
