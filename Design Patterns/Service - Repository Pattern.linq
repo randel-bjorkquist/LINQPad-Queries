@@ -3,6 +3,7 @@
   <NuGetReference>Microsoft.Data.SqlClient</NuGetReference>
   <Namespace>Dapper</Namespace>
   <Namespace>Microsoft.Data.SqlClient</Namespace>
+  <Namespace>Microsoft.Data.SqlClient.Server</Namespace>
   <Namespace>System.Threading.Tasks</Namespace>
 </Query>
 
@@ -20,8 +21,8 @@ async Task Main()
   var contact_repository = RepositoryFactory.CreateContactRepository();
   
   // ----------------------------------------------------------------------------------------------
-  IEnumerable<ContactEntity> contacts = await contact_repository.GetAllAsync();
-  contacts.Dump("Current list of 'contacts' retrieve via 'contact_repository.GetAllAsync()'", 0);
+  //IEnumerable<ContactEntity> contacts = await contact_repository.GetAllAsync();
+  //contacts.Dump("Current list of 'contacts' retrieve via 'contact_repository.GetAllAsync()'", 0);
   
   //var ids  = new List<int> { 1, 3, 5, 7 };
   //contacts = await contact_repository.GetByIDsAsync(ids);  
@@ -67,48 +68,48 @@ async Task Main()
 
   // ----------------------------------------------------------------------------------------------
   //NOTE: GetAll, OrderBy 'LastName', Sort 'SortDirection.DESC' ...
-  var all_contacts_request = new CursorPaginationRequest( PageSize: 0
-                                                         ,OrderByColumn: "LastName"
-                                                         ,SortDirection: SortDirection.DESC);
-  
-  var all_contacts = await contact_repository.GetAllAsync(all_contacts_request);
-  all_contacts.Dump($"contact_repository.GetAllAsync({all_contacts_request})", 0);
-  
-  //-------------------------------------------------------------------------------
-  var contact_cursor_request  = new CursorPaginationRequest( PageSize: 3
-                                                            ,OrderByColumn: "LastName"
-                                                            ,SortDirection: SortDirection.DESC );
-  
-  var contact_cursor_metadata = new CursorPaginationMetadata( NextID:    null
-                                                             ,NextValue: null
-                                                             ,HasMore:   true);  //NOTE: set 'HasMore' = true to start
-  
-  while(contact_cursor_metadata.HasMore)
-  {    
-    var contact_cursor_result = await contact_repository.GetAllAsync(contact_cursor_request);
-    contact_cursor_result.Dump($"contact_repository.GetAllAsync({contact_cursor_request})", 0);
-    
-    contact_cursor_metadata = contact_cursor_result.metadata;
-    contact_cursor_request  = new CursorPaginationRequest( contact_cursor_request.PageSize
-                                                          ,contact_cursor_request.OrderByColumn
-                                                          ,contact_cursor_request.SortDirection
-                                                          ,contact_cursor_metadata.NextID
-                                                          ,contact_cursor_metadata.NextValue );
-  };
+  //var all_contacts_request = new CursorPaginationRequest( PageSize: 0
+  //                                                       ,OrderByColumn: "LastName"
+  //                                                       ,SortDirection: SortDirection.DESC);
+  //
+  //var all_contacts = await contact_repository.GetAllAsync(all_contacts_request);
+  //all_contacts.Dump($"contact_repository.GetAllAsync({all_contacts_request})", 0);
   
   //-------------------------------------------------------------------------------
-  var contact_offset_request  = new OffsetPaginationRequest( PageNumber: 1
-                                                            ,PageSize: 5
-                                                            ,OrderByColumn: "LastName"
-                                                            ,SortDirection: SortDirection.DESC );
-                                                    
-  //var contact_offset_metadata = new OffsetPaginationMetadata( TotalRows:   0
-  //                                                           ,CurrentPage: 0
-  //                                                           ,PageSize:    0 );
+  //var contact_cursor_request  = new CursorPaginationRequest( PageSize: 3
+  //                                                          ,OrderByColumn: "LastName"
+  //                                                          ,SortDirection: SortDirection.DESC );
+  //
+  //var contact_cursor_metadata = new CursorPaginationMetadata( NextID:    null
+  //                                                           ,NextValue: null
+  //                                                           ,HasMore:   true);  //NOTE: set 'HasMore' = true to start
+  //
+  //while(contact_cursor_metadata.HasMore)
+  //{    
+  //  var contact_cursor_result = await contact_repository.GetAllAsync(contact_cursor_request);
+  //  contact_cursor_result.Dump($"contact_repository.GetAllAsync({contact_cursor_request})", 0);
+  //  
+  //  contact_cursor_metadata = contact_cursor_result.metadata;
+  //  contact_cursor_request  = new CursorPaginationRequest( contact_cursor_request.PageSize
+  //                                                        ,contact_cursor_request.OrderByColumn
+  //                                                        ,contact_cursor_request.SortDirection
+  //                                                        ,contact_cursor_metadata.NextID
+  //                                                        ,contact_cursor_metadata.NextValue );
+  //};
   
-  var contact_offset_result = await contact_repository.GetAllAsync(contact_offset_request);
-  contact_offset_result.Dump($"contact_repository.GetAllAsync({contact_offset_request})", 0);
-  
+  //-------------------------------------------------------------------------------
+  //var contact_offset_request  = new OffsetPaginationRequest( PageNumber: 1
+  //                                                          ,PageSize: 5
+  //                                                          ,OrderByColumn: "LastName"
+  //                                                          ,SortDirection: SortDirection.DESC );
+  //                                                  
+  ////var contact_offset_metadata = new OffsetPaginationMetadata( TotalRows:   0
+  ////                                                           ,CurrentPage: 0
+  ////                                                           ,PageSize:    0 );
+  //
+  //var contact_offset_result = await contact_repository.GetAllAsync(contact_offset_request);
+  //contact_offset_result.Dump($"contact_repository.GetAllAsync({contact_offset_request})", 0);
+  //
   #endregion
 
   #region 'User Repository'
@@ -117,8 +118,8 @@ async Task Main()
   var user_repository = RepositoryFactory.CreateUserRepository();
 
   // ----------------------------------------------------------------------------------------------
-  IEnumerable<UserEntity> users = await user_repository.GetAllAsync();
-  users.Dump("Current list of 'users' retrieve via 'user_repository.GetAllAsync()'", 0);
+  //IEnumerable<UserEntity> users = await user_repository.GetAllAsync();
+  //users.Dump("Current list of 'users' retrieve via 'user_repository.GetAllAsync()'", 0);
 
   //var ids  = new List<int> { 1, 3, 5, 7 };
   //users = await user_repository.GetByIDsAsync(ids);  
@@ -127,7 +128,7 @@ async Task Main()
   ////var id = ids.Random(1).First();
   ////var contact = await contact_repository.GetByIDAsync(id);
   ////contact.Dump($"contact_repository.GetByIDAsync( {id} )", 0);
-  
+
   // ----------------------------------------------------------------------------------------------
   //var new_user = new UserEntity { FirstName = "Fred"
   //                               ,LastName  = "Flintstone"
@@ -138,7 +139,7 @@ async Task Main()
   //var user = await user_repository.InsertAsync(new_user);
   //
   //user.Dump("user - after InsertAsync");
-  
+
   // ----------------------------------------------------------------------------------------------
   //var user_id = user.ID;
   //user = null;
@@ -146,7 +147,7 @@ async Task Main()
   //
   //user = await user_repository.GetByIDAsync(user_id);
   //user.Dump($"user from GetByIDAsync( {user_id} )", 1);
-  
+
   // ----------------------------------------------------------------------------------------------
   //user.FirstName  = "Barny";
   //user.LastName   = "Rubble";
@@ -157,56 +158,88 @@ async Task Main()
   //
   //var updated_user = await user_repository.GetByIDAsync(user.ID);
   //updated_user.Dump($"updated_user from GetByIDAsync( {user.ID} )", 1);
-  
+
   // ----------------------------------------------------------------------------------------------
   //var delete_user_successful = await user_repository.DeleteAsync(updated_user.ID);
   //delete_user_successful.Dump("delete_user_successful");
-  
+
   // ----------------------------------------------------------------------------------------------
   //NOTE: GetAll, OrderBy 'LastName', Sort 'SortDirection.DESC' ...
-  var all_users_request = new CursorPaginationRequest( PageSize: 0
-                                                      ,OrderByColumn: "LastName"
-                                                      ,SortDirection: SortDirection.DESC );
-  
-  var all_users = await user_repository.GetAllAsync(all_users_request);
-  all_users.Dump($"user_repository.GetAllAsync({all_users_request})", 0);
-  
+  //var all_users_request = new CursorPaginationRequest( PageSize: 0
+  //                                                    ,OrderByColumn: "LastName"
+  //                                                    ,SortDirection: SortDirection.DESC );
+  //
+  //var all_users = await user_repository.GetAllAsync(all_users_request);
+  //all_users.Dump($"user_repository.GetAllAsync({all_users_request})", 0);
+
   //-------------------------------------------------------------------------------
-  var user_cursor_request  = new CursorPaginationRequest( PageSize: 3
-                                                         ,OrderByColumn: "LastName"
-                                                         ,SortDirection: SortDirection.DESC );
-  
-  var user_cursor_metadata = new CursorPaginationMetadata( NextID:    null
-                                                          ,NextValue: null
-                                                          ,HasMore:   true );  //NOTE: set 'HasMore' = true to start
-  
-  while(user_cursor_metadata.HasMore)
-  {    
-    var user_cursor_result = await user_repository.GetAllAsync(user_cursor_request);
-    user_cursor_result.Dump($"user_repository.GetAllAsync({user_cursor_request})", 0);
-    
-    user_cursor_metadata = user_cursor_result.metadata;
-    user_cursor_request  = new CursorPaginationRequest( PageSize:      user_cursor_request.PageSize
-                                                       ,OrderByColumn: user_cursor_request.OrderByColumn
-                                                       ,SortDirection: user_cursor_request.SortDirection
-                                                       ,AfterID:       user_cursor_metadata.NextID
-                                                       ,AfterValue:    user_cursor_metadata.NextValue );
-  };
-  
+  //var user_cursor_request  = new CursorPaginationRequest( PageSize: 3
+  //                                                       ,OrderByColumn: "LastName"
+  //                                                       ,SortDirection: SortDirection.DESC );
+  //
+  //var user_cursor_metadata = new CursorPaginationMetadata( NextID:    null
+  //                                                        ,NextValue: null
+  //                                                        ,HasMore:   true );  //NOTE: set 'HasMore' = true to start
+  //
+  //while(user_cursor_metadata.HasMore)
+  //{    
+  //  var user_cursor_result = await user_repository.GetAllAsync(user_cursor_request);
+  //  user_cursor_result.Dump($"user_repository.GetAllAsync({user_cursor_request})", 0);
+  //  
+  //  user_cursor_metadata = user_cursor_result.metadata;
+  //  user_cursor_request  = new CursorPaginationRequest( PageSize:      user_cursor_request.PageSize
+  //                                                     ,OrderByColumn: user_cursor_request.OrderByColumn
+  //                                                     ,SortDirection: user_cursor_request.SortDirection
+  //                                                     ,AfterID:       user_cursor_metadata.NextID
+  //                                                     ,AfterValue:    user_cursor_metadata.NextValue );
+  //};
+
   //-------------------------------------------------------------------------------
-  var user_offset_request  = new OffsetPaginationRequest( PageNumber: 1
-                                                         ,PageSize: 3
-                                                         ,OrderByColumn: "LastName"
-                                                         ,SortDirection: SortDirection.DESC );
-                                                    
-  //var offset_metadata = new OffsetPaginationMetadata( TotalRows:   0
-  //                                                   ,CurrentPage: 0
-  //                                                   ,PageSize:    0);
-  
-  var uesr_offset_result = await user_repository.GetAllAsync(user_offset_request);
-  uesr_offset_result.Dump($"user_repository.GetAllAsync({user_offset_request})", 0);
-  
+  //var user_offset_request  = new OffsetPaginationRequest( PageNumber: 1
+  //                                                       ,PageSize: 3
+  //                                                       ,OrderByColumn: "LastName"
+  //                                                       ,SortDirection: SortDirection.DESC );
+  //                                                  
+  ////var offset_metadata = new OffsetPaginationMetadata( TotalRows:   0
+  ////                                                   ,CurrentPage: 0
+  ////                                                   ,PageSize:    0);
+  //
+  //var uesr_offset_result = await user_repository.GetAllAsync(user_offset_request);
+  //uesr_offset_result.Dump($"user_repository.GetAllAsync({user_offset_request})", 0);
+  //
   #endregion
+
+  //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  //FilterOptions contact_filter_options = null;
+  //FilterOptions contact_filter_options = new FilterBuilder().WithColumn("ID").Equals(2);
+  //FilterOptions contact_filter_options = new FilterBuilder().WithColumn("ID").GreaterThanOrEqual(4);
+  //FilterOptions contact_filter_options = new FilterBuilder().WithColumn("ID").GreaterThan(4);
+  FilterOptions contact_filter_options = new FilterBuilder().WithColumn("ID")
+                                                              .GreaterThan(4)
+                                                              .And()
+                                                              .LessThan(6);
+  //FilterOptions contact_filter_options = new FilterBuilder().WithColumn("ID").Between(2, 4, true);
+  //FilterOptions contact_filter_options = new FilterBuilder().WithColumn("ID").Between(2, 4, false);
+  //FilterOptions contact_filter_options = new FilterBuilder().WithColumn("LastName")
+  //                                                            .StartsWith("J")
+  //                                                          .ThenColumn("FirstName")
+  //                                                            .StartsWith("M")
+  //                                                            .Or()
+  //                                                            .StartsWith("L");
+  //FilterOptions contact_filter_options = new FilterBuilder().WithColumn("LastName").Contains("u")
+  //                                                          .And()
+  //                                                          .ThenColumn("LastName").Contains("v");
+
+  IEnumerable<ContactEntity> contacts = await contact_repository.GetAllAsync(contact_filter_options);
+  contacts.Dump("Current list of 'contacts' retrieve via 'contact_repository.GetAllAsync()'", 0);
+
+  //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~  
+  //FilterOptions user_filter_options = null;
+  FilterOptions user_filter_options = new FilterBuilder().WithColumn("ID").Equals(3);
+  
+  IEnumerable<UserEntity> users = await user_repository.GetAllAsync(user_filter_options);
+  users.Dump("Current list of 'users' retrieve via 'user_repository.GetAllAsync()'", 0);
+
 }
 
 #region IUserRepository/UserRepository
@@ -221,7 +254,9 @@ public class UserRepository : Repository<UserEntity>, IUserRepository<UserEntity
   protected override string GetAllWithOffsetPaginationStoredProcedureName => "UserGetAllWithOffsetPagination";
   protected override string GetAllWithCursorPaginationStoredProcedureName => "UserGetAllWithKeysetSeekPagination";
 
-  protected override string GetAllStoredProcedureName   => "UserGetAll";
+  //protected override string GetAllStoredProcedureName   => "UserGetAll";
+  protected override string GetAllStoredProcedureName   => "UserGetAllWithFilterOptions";
+  
   protected override string GetByIDStoredProcedureName  => "UserGetByID";
   protected override string InsertStoredProcedureName   => "UserInsert";
   protected override string UpdateStoredProcedureName   => "UserUpdate";
@@ -252,16 +287,26 @@ public class UserRepository : Repository<UserEntity>, IUserRepository<UserEntity
     parameters.Add("@Email"     ,user.Email);
   }
 
-  protected override void AddFilterParameters(DynamicParameters parameters, FilterOptions filter_options = null)
+  protected override void AddFilterParameters(DynamicParameters parameters, FilterOptions filters = null)
   {
-    base.AddFilterParameters(parameters, filter_options);
-
-    if (filter_options is UserFilterOptions options)
-    {
-      //options.IncludeDeletedUsers 
-    }
-      
+    if(filters?.Criteria == null || !filters.Criteria.Any()) 
+      return;
     
+    //NOTE: only apply filtering it filters IS NOT NULL/EMPTY ...    
+    base.AddFilterParameters(parameters, filters);
+    
+    var allowed = new DataTable();
+    allowed.Columns.Add("ColumnName", typeof(string));
+    allowed.Columns.Add("IsNullable", typeof(bool));
+    allowed.Columns.Add("DataType", typeof(string));
+    
+    allowed.Rows.Add("ID", false, "int");
+    allowed.Rows.Add("FirstName", false, "nvarchar");
+    allowed.Rows.Add("LastName", false, "nvarchar");
+    allowed.Rows.Add("Email", false, "nvarchar");
+    allowed.Rows.Add("Deleted", false, "bit");
+    
+    parameters.Add("@AllowedColumns", allowed.AsTableValuedParameter("dbo.AllowedColumnType"));
   }
 }
 
@@ -279,7 +324,9 @@ public class ContactRepository : Repository<ContactEntity>, IContactRepository<C
   protected override string GetAllWithOffsetPaginationStoredProcedureName => "ContactGetAllWithOffsetPagination";
   protected override string GetAllWithCursorPaginationStoredProcedureName => "ContactGetAllWithKeysetSeekPagination";
   
-  protected override string GetAllStoredProcedureName   => "ContactGetAll";
+  //protected override string GetAllStoredProcedureName   => "ContactGetAll";
+  protected override string GetAllStoredProcedureName   => "ContactGetAllWithFilterOptions";
+  
   protected override string GetByIDStoredProcedureName  => "ContactGetByID";
   protected override string InsertStoredProcedureName   => "ContactInsert";
   protected override string UpdateStoredProcedureName   => "ContactUpdate";
@@ -319,6 +366,20 @@ public class ContactRepository : Repository<ContactEntity>, IContactRepository<C
   protected override void AddFilterParameters(DynamicParameters parameters, FilterOptions filter_options = null)
   {
     base.AddFilterParameters(parameters, filter_options);
+    
+    var allowed = new DataTable();
+    allowed.Columns.Add("ColumnName", typeof(string));
+    allowed.Columns.Add("IsNullable", typeof(bool));
+    allowed.Columns.Add("DataType", typeof(string));
+    
+    allowed.Rows.Add("ID", false, "int");
+    allowed.Rows.Add("FirstName", false, "nvarchar");
+    allowed.Rows.Add("LastName", false, "nvarchar");
+    allowed.Rows.Add("Email", false, "nvarchar");
+    allowed.Rows.Add("Company", false, "nvarchar");
+    allowed.Rows.Add("Title", false, "nvarchar");
+    
+    parameters.Add("@AllowedColumns", allowed.AsTableValuedParameter("dbo.AllowedColumnType"));
   }
 }
 
@@ -393,7 +454,6 @@ public abstract class Repository<TEntity> : Repository, IRepository<TEntity>
     AddFilterParameters(parameters, filters);
     
     var entities = await dbConnection.QueryAsync<TEntity>( GetAllStoredProcedureName
-//                                                          ,param: parameters.ParameterNames.Any() ? parameters : null
                                                           ,param: parameters
                                                           ,commandType: CommandType.StoredProcedure);
     return entities;
@@ -624,24 +684,30 @@ public abstract class Repository<TEntity> : Repository, IRepository<TEntity>
   {
     if(filters?.Criteria == null || !filters.Criteria.Any()) 
       return;
-
-    int index = 0;
+    
+    int index    = 0;
+    var tvp_rows = new List<FilterRow>();    
     
     foreach(var kvp in filters.Criteria)
     {
-      string column  = kvp.Key; // Whitelist in derived if needed
-      var conditions = kvp.Value;
-
-      foreach(var cond in conditions)
+      foreach(var condition in kvp.Value)
       {
-        string paramName = $"@F{index++}";
-        parameters.Add(paramName, cond.Value);
-
-        // In proc: map Operator + Logical to SQL (dynamic or static)
-        // Example: column = @F0 for Equals, column <> @F0 for NotEquals, etc.
+        var row = new FilterRow( ColumnName:      kvp.Key
+                                ,Operator:        condition.Op.ToString()
+                                ,LogicalOperator: condition.Logical.ToString()
+                                ,Value:           condition.Value //SQL_VARIANT - Dapper handles this correctly
+                                ,ParameterIndex:  index );
+        
+        tvp_rows.Add(row);
+        
+        index++;
       }
     }
-  }
+    
+    var records = tvp_rows.ToSqlDataRecords();
+    parameters.Add( "@Filters"
+                   ,new SqlDataRecordTvp(records, "FilterCriteriaType") );
+ }
   
   #endregion
 }
@@ -674,7 +740,8 @@ public record OffsetPaginationMetadata(int TotalRows, int CurrentPage, int PageS
 
 #endregion
 
-#region FilterOptions
+#region COMMENTED OUT: R&D CODE (FilterOptions)
+/*
 
 public class UserFilterOptions: FilterOptions
 //public record UserFilterOptions: FilterOptions
@@ -692,6 +759,7 @@ public class ContactFilterOptions : FilterOptions
   //public static FilterBuilder<ContactFilterOptions> Builder() => new();  
 }
 
+*/
 #endregion
 
 #region Database Interfaces & abstract Entities
@@ -784,3 +852,57 @@ private static class RepositoryFactory
 }
 
 #endregion
+
+public sealed record FilterRow(string ColumnName, string Operator, string LogicalOperator, object Value, int ParameterIndex);
+
+public static class SqlDataRecordExtensions
+{
+  public static IEnumerable<SqlDataRecord> ToSqlDataRecords(this IEnumerable<FilterRow> rows)
+    => rows?.Select(r => r.ToSqlDataRecord()) ?? [];
+
+  public static SqlDataRecord ToSqlDataRecord(this FilterRow row)
+  {
+    var meta = new [] { new SqlMetaData("ColumnName"      ,SqlDbType.NVarChar ,100)
+                       ,new SqlMetaData("Operator"        ,SqlDbType.NVarChar , 20)
+                       ,new SqlMetaData("LogicalOperator" ,SqlDbType.NVarChar , 10)
+                       ,new SqlMetaData("Value"           ,SqlDbType.Variant)
+                       ,new SqlMetaData("ParameterIndex"  ,SqlDbType.Int) };
+  
+  
+    var _record = new SqlDataRecord(meta);
+    
+    _record.SetString(0, row.ColumnName);
+    _record.SetString(1, row.Operator);
+    _record.SetString(2, row.LogicalOperator);
+    
+    if(row.Value is null)
+      _record.SetDBNull(3);
+    else
+      _record.SetValue(3, row.Value);
+    
+    _record.SetInt32(4, row.ParameterIndex);
+    
+    return _record;
+  }
+}
+
+public sealed class SqlDataRecordTvp : SqlMapper.ICustomQueryParameter
+{
+  private readonly IEnumerable<SqlDataRecord> _records;
+  private readonly string _typeName;
+  
+  public SqlDataRecordTvp(IEnumerable<SqlDataRecord> records, string typeName)
+  {
+    _records  = records;
+    _typeName = typeName;
+  }
+  
+  public void AddParameter(IDbCommand command, string name)
+  {
+    var sql_command = (SqlCommand)command;
+    
+    var p = sql_command.Parameters.Add(name, SqlDbType.Structured);
+    p.TypeName = _typeName;   //e.g. dbo.FilterCriteriaType
+    p.Value    = _records;    // IEnumerable<SqlDataRecord>
+  }
+}

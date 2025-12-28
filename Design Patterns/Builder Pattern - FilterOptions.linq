@@ -111,10 +111,10 @@ public class FilterBuilder
   {
     CommitCurrentColumn();
 
-    CurrentColumn = column;
+    CurrentColumn     = column;    
     CurrentConditions = new List<FilterCondition>();
-    NextLogical = LogicalOperator.AND;
-    NextIsNegated = false;
+    NextLogical       = LogicalOperator.AND;
+    NextIsNegated     = false;
 
     return new ColumnFilterBuilder(this);
   }
@@ -133,8 +133,11 @@ public class FilterBuilder
   internal void AddCondition(FilterCondition condition)
   {
     var effective_op = NextIsNegated ? NegateOperator(condition.Op) : condition.Op;
-    CurrentConditions.Add(condition with { Op = effective_op });
+    CurrentConditions.Add(condition with { Op = effective_op, Logical = NextLogical });
+    
+    // reset for next condition
     NextIsNegated = false;
+    NextLogical   = LogicalOperator.AND;
   }
 
   public FilterOptions Build()
@@ -257,10 +260,10 @@ public class ColumnFilterBuilder
     _parent.CommitCurrentColumn();
     
     // Start the new column
-    _parent.CurrentColumn      = column;
-    _parent.CurrentConditions  = new List<FilterCondition>();
-    _parent.NextLogical        = LogicalOperator.AND;
-    _parent.NextIsNegated = false;
+    _parent.CurrentColumn     = column;    
+    _parent.CurrentConditions = new List<FilterCondition>();
+    _parent.NextLogical       = LogicalOperator.AND;
+    _parent.NextIsNegated     = false;
     
     // Return self - chain continues on the same builder instance
     return this;
