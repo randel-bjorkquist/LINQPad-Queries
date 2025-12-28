@@ -5,8 +5,7 @@ void Main()
   //NOTE: In order for the implicit operator to work on the reference type, the C# compiler must know
   //      what type to convert it to, and thus the REQUIREMENT to define the variables specific type
   //      AND NOT use the keyword 'var'.
-  //FilterOptions filter = new FilterBuilder<FilterOptions>()
-  FilterOptions filter = new FilterBuilder()
+  UserFilterOptions filter = new FilterBuilder<UserFilterOptions>()
       .WithColumn("Age")
           .GreaterThan(18)
           .LessThan(65)                         // implicit AND
@@ -37,7 +36,7 @@ void Main()
   //NOTE: In order for the implicit operator to work on the reference type, the C# compiler must know
   //      what type to convert it to, and thus the REQUIREMENT to define the variables specific type
   //      AND NOT use the keyword 'var'.
-  FilterOptions user_filter_options = new FilterBuilder()
+  UserFilterOptions user_filter_options = UserFilterOptions.Builder()
       .WithColumn("Status")
           .OrGroup(g => g.Equals("Active")
                          .Or()
@@ -99,22 +98,70 @@ public abstract class FilterOptions<T> where T : class
   // Default constructor ensures empty options = no fills
 }
 
-public class FilterOptions
+public abstract class FilterOptions
 {
   // Key = column name, Value = list of conditions for that column
   public Dictionary<string, List<FilterCondition>> Criteria { get; init; } = new();
 }
 
-public class FilterBuilder
+/// <summary>
+/// Builds filter options fluently. Assign to UserFilterOptions to trigger build:
+/// UserFilterOptions opts = UserFilterOptions.Builder()...;
+/// </summary>
+public class UserFilterOptions : FilterOptions
 {
-  private readonly FilterOptions _options = new();
+  // Strongly-typed helper (optional but nice)
+  public static FilterBuilder<UserFilterOptions> Builder() => new();
+
+  // Strongly-typed shortcuts
+  //public static FilterBuilder<UserFilterOptions> WithActiveStatus()
+  //  => Builder().WithColumn("Status").Equals("Active");
+  //
+  //public FilterBuilder<UserFilterOptions> WithDeletedUsers()
+  //  => Builder().WithColumn("Deleted").Equals(true);
+  //
+  //public FilterBuilder<UserFilterOptions> WithEmailDomain(string domain)
+  //  => Builder().WithColumn("Email").EndsWith(domain);
+}
+
+public static class UserFilterBuilderExtensions
+{
+  // Strongly-typed shortcuts
+  //public static FilterBuilder<UserFilterOptions> WithActiveStatus(this FilterBuilder<UserFilterOptions> builder)
+  //  => builder.WithColumn("Status").Equals("Active");
+  //
+  //public static FilterBuilder<UserFilterOptions> WithDeletedUsers(this FilterBuilder<UserFilterOptions> builder)
+  //  => builder.WithColumn("Deleted").Equals(true);
+  //
+  //public static FilterBuilder<UserFilterOptions> WithEmailDomain(this FilterBuilder<UserFilterOptions> builder, string domain)
+  //  => builder.WithColumn("Email").EndsWith(domain);
+}
+
+public enum ContactColumns { ID, FirstName, LastName, Email, Company, Title }
+
+/// <summary>
+/// Builds filter options fluently. Assign to ContactFilterOptions to trigger build:
+/// ContactFilterOptions opts = ContactFilterOptions.Builder()...;
+/// </summary>
+public class ContactFilterOptions : FilterOptions
+{
+  // Strongly-typed helper (optional but nice)
+  public static FilterBuilder<ContactFilterOptions> Builder() => new();
+  
+  //public FilterBuilder<ContactFilterOptions> WithColumn(ContactColumns column)
+  //  => Builder().WithColumn(column.ToString());
+}
+
+public class FilterBuilder<TFilter> where TFilter : FilterOptions, new()
+{
+  private readonly TFilter _options = new();
 
   internal string CurrentColumn { get; set; }
   internal List<FilterCondition> CurrentConditions { get; set; } = new();
   internal LogicalOperator NextLogical { get; set; } = LogicalOperator.AND;
   internal bool NextIsNegated { get; set; } = false;
 
-  public ColumnFilterBuilder WithColumn(string column)
+  public ColumnFilterBuilder<TFilter> WithColumn(string column)
   {
     CommitCurrentColumn();
 
@@ -123,7 +170,7 @@ public class FilterBuilder
     NextLogical = LogicalOperator.AND;
     NextIsNegated = false;
 
-    return new ColumnFilterBuilder(this);
+    return new ColumnFilterBuilder<TFilter>(this);
   }
 
   internal void CommitCurrentColumn()
@@ -144,59 +191,59 @@ public class FilterBuilder
     NextIsNegated = false;
   }
 
-  public FilterOptions Build()
+  public TFilter Build()
   {
     CommitCurrentColumn();
     return _options;
   }
 
-  public static implicit operator FilterOptions(FilterBuilder builder)
+  public static implicit operator TFilter(FilterBuilder<TFilter> builder)
   => builder.Build();
 }
 
-public class ColumnFilterBuilder
+public class ColumnFilterBuilder<TFilter> where TFilter : FilterOptions, new()
 {
-  private readonly FilterBuilder _parent;
+  private readonly FilterBuilder<TFilter> _parent;
 
-  internal ColumnFilterBuilder(FilterBuilder parent)
+  internal ColumnFilterBuilder(FilterBuilder<TFilter> parent)
   {
     _parent = parent;
   }
 
-  private ColumnFilterBuilder AddCondition(object? value, Operator op)
+  private ColumnFilterBuilder<TFilter> AddCondition(object? value, Operator op)
   {
     _parent.AddCondition(new FilterCondition(value, op));
     return this;
   }
 
   // --- Positive operators ---
-  public new ColumnFilterBuilder Equals(object value)         => AddCondition(value, Operator.Equals);
+  public new ColumnFilterBuilder<TFilter> Equals(object value)          => AddCondition(value, Operator.Equals);
   
-  public ColumnFilterBuilder GreaterThan(object value)        => AddCondition(value, Operator.GreaterThan);
-  public ColumnFilterBuilder GreaterThanOrEqual(object value) => AddCondition(value, Operator.GreaterThanOrEqual);
+  public ColumnFilterBuilder<TFilter> GreaterThan(object value)         => AddCondition(value, Operator.GreaterThan);
+  public ColumnFilterBuilder<TFilter> GreaterThanOrEqual(object value)  => AddCondition(value, Operator.GreaterThanOrEqual);
   
-  public ColumnFilterBuilder LessThan(object value)           => AddCondition(value, Operator.LessThan);
-  public ColumnFilterBuilder LessThanOrEqual(object value)    => AddCondition(value, Operator.LessThanOrEqual);
+  public ColumnFilterBuilder<TFilter> LessThan(object value)            => AddCondition(value, Operator.LessThan);
+  public ColumnFilterBuilder<TFilter> LessThanOrEqual(object value)     => AddCondition(value, Operator.LessThanOrEqual);
   
-  public ColumnFilterBuilder Contains(string value)           => AddCondition($"%{value}%", Operator.Like);
-  public ColumnFilterBuilder StartsWith(string value)         => AddCondition($"{value}%", Operator.Like);
-  public ColumnFilterBuilder EndsWith(string value)           => AddCondition($"%{value}", Operator.Like);
+  public ColumnFilterBuilder<TFilter> Contains(string value)            => AddCondition($"%{value}%", Operator.Like);
+  public ColumnFilterBuilder<TFilter> StartsWith(string value)          => AddCondition($"{value}%", Operator.Like);
+  public ColumnFilterBuilder<TFilter> EndsWith(string value)            => AddCondition($"%{value}", Operator.Like);
   
-  public ColumnFilterBuilder In(params object[] values)       => AddCondition(values, Operator.In);
-  public ColumnFilterBuilder IsNull()                         => AddCondition(null, Operator.IsNull);
+  public ColumnFilterBuilder<TFilter> In(params object[] values)        => AddCondition(values, Operator.In);
+  public ColumnFilterBuilder<TFilter> IsNull()                          => AddCondition(null, Operator.IsNull);
 
   // --- Dedicated negative operators ---
-  public ColumnFilterBuilder NotEquals(object value)        => AddCondition(value, Operator.NotEquals);
+  public ColumnFilterBuilder<TFilter> NotEquals(object value)         => AddCondition(value, Operator.NotEquals);
   
-  public ColumnFilterBuilder DoesNotContain(string value)   => AddCondition($"%{value}%", Operator.NotLike);
-  public ColumnFilterBuilder DoesNotStartWith(string value) => AddCondition($"{value}%", Operator.NotLike);
-  public ColumnFilterBuilder DoesNotEndWith(string value)   => AddCondition($"%{value}", Operator.NotLike);
+  public ColumnFilterBuilder<TFilter> DoesNotContain(string value)    => AddCondition($"%{value}%", Operator.NotLike);
+  public ColumnFilterBuilder<TFilter> DoesNotStartWith(string value)  => AddCondition($"{value}%", Operator.NotLike);
+  public ColumnFilterBuilder<TFilter> DoesNotEndWith(string value)    => AddCondition($"%{value}", Operator.NotLike);
   
-  public ColumnFilterBuilder NotIn(params object[] values)  => AddCondition(values, Operator.NotIn);
-  public ColumnFilterBuilder IsNotNull()                    => AddCondition(null, Operator.IsNotNull);
+  public ColumnFilterBuilder<TFilter> NotIn(params object[] values)   => AddCondition(values, Operator.NotIn);
+  public ColumnFilterBuilder<TFilter> IsNotNull()                     => AddCondition(null, Operator.IsNotNull);
 
   // --- Convenience: Between ---
-  public ColumnFilterBuilder Between(object from, object to, bool inclusive = false)
+  public ColumnFilterBuilder<TFilter> Between(object from, object to, bool inclusive = false)
   {
     if(inclusive)
     {
@@ -213,7 +260,7 @@ public class ColumnFilterBuilder
   }
 
   // --- Multi-value ContainsAny (OR on LIKE) ---
-  public ColumnFilterBuilder ContainsAny(params string[] values)
+  public ColumnFilterBuilder<TFilter> ContainsAny(params string[] values)
   {
     for(int i = 0; i < values.Length; i++)
     {
@@ -225,23 +272,23 @@ public class ColumnFilterBuilder
   }
 
   // --- Logical connectors ---
-  public ColumnFilterBuilder And() => this;
+  public ColumnFilterBuilder<TFilter> And() => this;
 
-  public ColumnFilterBuilder Or()
+  public ColumnFilterBuilder<TFilter> Or()
   {
     //_parent.AddCondition(new FilterCondition(null, Operator.Equals, LogicalOperator.OR));
     _parent.NextLogical = LogicalOperator.OR;
     return this;
   }
   
-  public ColumnFilterBuilder Not()
+  public ColumnFilterBuilder<TFilter> Not()
   {
     _parent.NextIsNegated = true;
     return this;
   }
   
   // --- Grouping (optional advanced feature) ---
-  public ColumnFilterBuilder OrGroup(Action<ColumnFilterBuilder> group)
+  public ColumnFilterBuilder<TFilter> OrGroup(Action<ColumnFilterBuilder<TFilter>> group)
   {
     Or(); // start with OR
     group(this);
@@ -249,7 +296,7 @@ public class ColumnFilterBuilder
     return this;
   }
 
-  public ColumnFilterBuilder AndGroup(Action<ColumnFilterBuilder> group)
+  public ColumnFilterBuilder<TFilter> AndGroup(Action<ColumnFilterBuilder<TFilter>> group)
   {
     And(); // explicit AND group
     group(this);
@@ -258,7 +305,7 @@ public class ColumnFilterBuilder
   }
 
   // --- End column and continue to next column ---
-  public ColumnFilterBuilder ThenColumn(string column)
+  public ColumnFilterBuilder<TFilter> ThenColumn(string column)
   {
     // Commit the current column's conditions
     _parent.CommitCurrentColumn();
@@ -283,7 +330,7 @@ public class ColumnFilterBuilder
   // Optional alias for familiarity
   //public FilterBuilder<TFilter> Build() => End();
   
-  public static implicit operator FilterOptions(ColumnFilterBuilder builder)
+  public static implicit operator TFilter(ColumnFilterBuilder<TFilter> builder)
 //  => builder.End().Build();
   => builder._parent.Build();
 }
