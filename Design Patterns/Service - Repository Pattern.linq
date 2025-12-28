@@ -833,13 +833,12 @@ public class StateEntity : dbEntity
 
 private static class RepositoryFactory
 {
-  //NOTE: Builds a connection string manually via SqlFactory;
-  //      DO NOT use the 'expression-bodied' syntax here!
+  //NOTE: using Windows Authentication ...
+  //NOTE: Builds a connection string manually via SqlFactory; DO NOT use the 'expression-bodied' 
+  //      syntax here, as doing so will create new ConnectionsStrings each time it's called!
   private static readonly string ConnectionString 
     = new SqlFactory().BuildSqlConnection( server: "localhost\\SQL2022"
                                           ,database: "Pluralsight_ContactDB"
-                                          ,username: "sa"
-                                          ,password: "SQLP@ssw0rd"
                                           ,encrypt: true
                                           ,trust_certificate: true)
                       .ConnectionString;
