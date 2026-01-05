@@ -1,15 +1,12 @@
 <Query Kind="Program" />
 
 //-------------------------------------------------------------------------------------------------------
-//NOTE: interesting enough, I need to include "Mapping Feature\Interfaces" in my demo file, even though
-//      it's not used here; but rather the "Mapping Feature\Mapping Scanner", which it's included in as
-//      well.
-#load "Mapping Feature\Interfaces"
-#load "Mapping Feature\Mapping Extensions"
-#load "Mapping Feature\Manual Mappings"
-#load "Mapping Feature\Mapping Registry"
-#load "Mapping Feature\Mapping Scanner"
-#load "Mapping Feature\Types"
+#load "Mapping Feature\Interfaces"            //NOTE: Interesting enough, I need to include
+#load "Mapping Feature\Mapping Extensions"    //      "Mapping Feature\Interfaces" in my demo file, even
+#load "Mapping Feature\Manual Mappings"       //      though it's not used here; but rather the 
+#load "Mapping Feature\Mapping Registry"      //      "Mapping Feature\Mapping Scanner", which it's 
+#load "Mapping Feature\Mapping Scanner"       //      included in as well.
+#load "Mapping Feature\Types"                 
 
 void Main()
 {
