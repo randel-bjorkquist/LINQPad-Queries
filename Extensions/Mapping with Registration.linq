@@ -38,7 +38,6 @@ void Main()
   User fred_flintstone = dto_fred_flintstone.MapTo<User>();
   fred_flintstone.Dump("User fred_flintstone = dto_fred_flintstone.MapTo<User>();", 0);    
   
-  //-------------------------------------------------------------------------------------------------------
   var dtos  = users.MapToList<UserDTO>();
   dtos.Dump("var dtos  = users.MapToList<UserDTO>();", 0);
 }
@@ -55,12 +54,14 @@ public static class Mapping
     if (source is null) 
       throw new ArgumentNullException(nameof(source));
 
-    if (_maps.TryGetValue((typeof(TSource), typeof(TDestination)), out var _delegate) && _delegate is Func<TSource, TDestination> func)
+    var key = (typeof(TSource), typeof(TDestination));
+    
+    if (_maps.TryGetValue(key, out var _delegate) && _delegate is Func<TSource, TDestination> func)
     {
       return func(source);
     }
 
-    throw new InvalidOperationException($"No map registered: {typeof(TSource).Name} -> {typeof(TDestination).Name}");
+    throw new InvalidOperationException($"No mapping registered: {typeof(TSource).Name} -> {typeof(TDestination).Name}");
   }
 }
 
