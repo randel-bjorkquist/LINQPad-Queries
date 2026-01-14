@@ -55,15 +55,14 @@ void Main()
   
   event_type.Dump($"var dbEventTypeID = 1;{Environment.NewLine}var event_type = (mcsEventType)dbEventTypeID;", 0);
   
-  
   //-----------------------------------------------------------------------------------------------
   // implicit conversion of 'mcsEventType.InspectionSaved' to int | ID → 1
   int id = mcsEventType.InspectionSaved;
   id.Dump("int id = mcsEventType.InspectionSaved;");
 
-  // 'mcsEventType.InspectionSaved.ID' → 1
-  id = mcsEventType.InspectionSaved.ID;
-  id.Dump("int id = mcsEventType.InspectionSaved.ID;");
+  // 'mcsEventType.InspectionSaved.Key' → 1
+  id = mcsEventType.InspectionSaved.Key;
+  id.Dump("int id = mcsEventType.InspectionSaved.Key;");
   
   // implicit conversion of 'mcsEventType.InspectionSaved' to string | Description → "Inspection Saved"
   string description = mcsEventType.InspectionSaved;
@@ -80,8 +79,8 @@ void Main()
 
   //-----------------------------------------------------------------------------------------------
   // Safe lookup
-  var event_type_by_id = mcsEventType.GetByID(2);
-  event_type_by_id.Dump("var event_type_by_id = mcsEventType.GetByID(2);", 0);
+  var event_type_by_id = mcsEventType.GetByKey(2);
+  event_type_by_id.Dump("var event_type_by_id = mcsEventType.GetByKey(2);", 0);
 
   // All values (for dropdowns, etc.)
   var all_event_types = mcsEventType.GetAll();  // IReadOnlyList<mcsEventType>
@@ -104,25 +103,26 @@ void Main()
   mcsEventType.VacatedTenantSaved.AsJsonObject().Dump("mcsEventType.VacatedTenantSaved.AsJsonObject()");
 }
 
-#region abstract/base mcsType
+#region abstract mcsSmartEnums / mcsSmartEnumBase
 
-public abstract class mcsSmartEnum<Tself, Tid>
-  where Tself : mcsSmartEnum<Tself, Tid>
-  where Tid   : notnull, IEquatable<Tid>
+// base ---------------------------------------------------------------------------------
+public abstract class mcsSmartEnumBase<TSelf, TKey>
+  where TSelf : mcsSmartEnumBase<TSelf, TKey>
+  where TKey  : notnull, IEquatable<TKey>, IComparable<TKey>
 {
-  public Tid ID             { get; }
+  public TKey Key           { get; }
   public string Description { get; }
   public string Code        { get; private set; } = "Unknown";
   
-  protected mcsSmartEnum(Tid id, string description, string code = null)
+  protected mcsSmartEnumBase(TKey key, string description, string code = null)
   {
-    ID          = id          ?? throw new ArgumentNullException(nameof(id));
+    Key         = key         ?? throw new ArgumentNullException(nameof(key));
     Description = description ?? throw new ArgumentNullException(nameof(description));
     Code        = code        ?? Code;
   }
   
   #region COMMENTED OUT: partial fix for reflection and issue with calculating 'Code' values ...
-  //
+  
   //private static readonly Lazy<IReadOnlyDictionary<Tid, Tself>> _all = new(() => {    
   //  RuntimeHelpers.RunClassConstructor(typeof(Tself).TypeHandle);
   //  
@@ -138,50 +138,259 @@ public abstract class mcsSmartEnum<Tself, Tid>
   //      value.Code = field.Name;
   //  }
   //  
-  //  return instances.ToDictionary(i => i.Value.ID, i => i.Value);
+  //  return instances.ToDictionary(i => i.Value.Key, i => i.Value);
   //
   //});
-  //
+  
   #endregion
 
-  private static readonly Lazy<IReadOnlyDictionary<Tid, Tself>> _all = new(() => {
-    return typeof(Tself).GetFields(BindingFlags.Public | BindingFlags.Static)
-                        .Where(f => f.FieldType == typeof(Tself))
-                        .Select(f => (Tself)f.GetValue(null)!)
-                        .OrderBy(f => f.ID)
-                        .ToDictionary(f => f.ID);
+  private static readonly Lazy<IReadOnlyDictionary<TKey, TSelf>> _all = new(() => {
+    return typeof(TSelf).GetFields(BindingFlags.Public | BindingFlags.Static)
+                        .Where(f => f.FieldType == typeof(TSelf))
+                        .Select(f => (TSelf)f.GetValue(null)!)
+                        .OrderBy(f => f.Key)
+                        .ToDictionary(f => f.Key);
   });
 
-  private static IReadOnlyDictionary<Tid, Tself> _fields => _all.Value;
+  private static IReadOnlyDictionary<TKey, TSelf> _fields => _all.Value;
   
-  public static IReadOnlyList<Tself> GetAll()
-    => _fields.Values.ToList<Tself>()
+  public static IReadOnlyList<TSelf> GetAll()
+    => _fields.Values.ToList<TSelf>()
                      .AsReadOnly();
 
-  public static Tself GetByID(Tid id)
-    => _fields.TryGetValue(id, out Tself value) 
+  public static TSelf GetByKey(TKey key)
+    => _fields.TryGetValue(key, out TSelf value) 
         ? value 
-        : throw new ArgumentOutOfRangeException(nameof(id), $"Unknown {typeof(Tself).Name} id: {id}");
+        : throw new ArgumentOutOfRangeException(nameof(key), $"Unknown {typeof(TSelf).Name} key: {key}");
         
   public override string ToString()
-    => $"ID: {ID}, Description: {Description}, Code: {Code}";
+    => $"Key: {Key}, Description: {Description}, Code: {Code}";
 
   /// <summary>
   /// Returns a structured JSON-ready object. Safe for APIs, logs, and serialaztion.
   /// </summary>
   public virtual object AsJsonObject()
-    => new {id = ID, code = Code, description = Description};
+    => new {key = Key, code = Code, description = Description};
   
   /// <summary>
   /// Returns a JSON string representation. This is a convenience wrapper over AsJsonObject().
   /// </summary>
   public string AsJsonString(JsonSerializerOptions? options = null)
     => JsonSerializer.Serialize(AsJsonObject(), options);
+  
+  #region enum-like equality: compare based on ID only (ignore Description for uniqueness)
+  
+  public override bool Equals(object obj)
+    => obj is TSelf other && Equals(other);
+  
+  public virtual bool Equals(TSelf other)
+    => other is not null && EqualityComparer<TKey>.Default.Equals(Key, other.Key);
+  
+  public override int GetHashCode()
+    => EqualityComparer<TKey>.Default.GetHashCode(Key);
+  
+  public static bool operator == (mcsSmartEnumBase<TSelf, TKey> left, mcsSmartEnumBase<TSelf, TKey> right)
+    => ReferenceEquals(left, right) || (left is not null && right is not null && left.Equals((TSelf)right));
+  
+  public static bool operator != (mcsSmartEnumBase<TSelf, TKey> left, mcsSmartEnumBase<TSelf, TKey> right)
+    => !(left == right);
+  
+  public static bool operator < (mcsSmartEnumBase<TSelf, TKey> left, mcsSmartEnumBase<TSelf, TKey> right)
+    => left.Key.CompareTo(right.Key) < 0;
+    
+  public static bool operator > (mcsSmartEnumBase<TSelf, TKey> left, mcsSmartEnumBase<TSelf, TKey> right)
+    => left.Key.CompareTo(right.Key) > 0;
+    
+  public static bool operator <= (mcsSmartEnumBase<TSelf, TKey> left, mcsSmartEnumBase<TSelf, TKey> right)
+    => left.Key.CompareTo(right.Key) <= 0;
+  
+  public static bool operator >= (mcsSmartEnumBase<TSelf, TKey> left, mcsSmartEnumBase<TSelf, TKey> right)
+    => left.Key.CompareTo(right.Key) >= 0;
+
+  #endregion
+}
+
+// short/int16 --------------------------------------------------------------------------
+public abstract class mcsSmartEnumShort<Tself> : mcsSmartEnumInt16<Tself>
+  where Tself : mcsSmartEnumShort<Tself>
+{
+  protected mcsSmartEnumShort(short id, string description, string code = null) 
+    : base(id, description, code) { }
+}
+
+public abstract class mcsSmartEnumInt16<Tself> : mcsSmartEnumBase<Tself, Int16>
+  where Tself : mcsSmartEnumInt16<Tself>
+{
+  protected mcsSmartEnumInt16(Int16 id, string description, string code = null) 
+    : base(id, description, code) { }
+  
+  #region 'explicit/implicit' operators ...
+  
+  // short -> EventType (explicit cast only - forces developer to think about it)
+  [Obsolete("Prefer mcsEventType.GetByKey(short) for clarity and future-proofing.", false)]
+  public static explicit operator mcsSmartEnumInt16<Tself>(Int16 key)
+    => GetByKey(key);
+    
+  // EventType -> short (implicit or explicit)
+  [Obsolete("Prefer mcsEventType.Field.ID for clarity and future-proofing.", false)]
+  public static implicit operator Int16(mcsSmartEnumInt16<Tself> type)
+    => type is null ? throw new ArgumentNullException(nameof(type)) : type.Key;
+  
+  [Obsolete("Prefer mcsEventType.Field.Description for clarity and future-proofing.", false)]
+  public static implicit operator string(mcsSmartEnumInt16<Tself> type)
+    => type is null ? throw new ArgumentNullException(nameof(type)) : type.Description;
+  
+  #endregion
+}
+
+// int/int32 ----------------------------------------------------------------------------
+public abstract class mcsSmartEnumInt<Tself> : mcsSmartEnumInt32<Tself>
+  where Tself : mcsSmartEnumInt<Tself>
+{
+  protected mcsSmartEnumInt(int id, string description, string code = null) 
+    : base(id, description, code) { }
+}
+
+public abstract class mcsSmartEnumInt32<Tself> : mcsSmartEnumBase<Tself, Int32>
+  where Tself : mcsSmartEnumInt32<Tself>
+{
+  protected mcsSmartEnumInt32(Int32 id, string description, string code = null) 
+    : base(id, description, code) { }
+  
+  #region 'explicit/implicit' operators ...
+  
+  // int -> EventType (explicit cast only - forces developer to think about it)
+  [Obsolete("Prefer mcsEventType.GetByKey(int) for clarity and future-proofing.", false)]
+  public static explicit operator mcsSmartEnumInt32<Tself>(int key)
+    => GetByKey(key);
+    
+  // EventType -> int (implicit or explicit)
+  [Obsolete("Prefer mcsEventType.Field.ID for clarity and future-proofing.", false)]
+  public static implicit operator int(mcsSmartEnumInt32<Tself> type)
+    => type is null ? throw new ArgumentNullException(nameof(type)) : type.Key;
+  
+  [Obsolete("Prefer mcsEventType.Field.Description for clarity and future-proofing.", false)]
+  public static implicit operator string(mcsSmartEnumInt32<Tself> type)
+    => type is null ? throw new ArgumentNullException(nameof(type)) : type.Description;
+  
+  #endregion
+}
+
+// long/int64 ---------------------------------------------------------------------------
+public abstract class mcsSmartEnumLong<Tself> : mcsSmartEnumInt64<Tself>
+  where Tself : mcsSmartEnumInt64<Tself>
+{
+  protected mcsSmartEnumLong(long id, string description, string code = null) 
+    : base(id, description, code) { }
+}
+
+public abstract class mcsSmartEnumInt64<Tself> : mcsSmartEnumBase<Tself, Int64>
+  where Tself : mcsSmartEnumInt64<Tself>
+{
+  protected mcsSmartEnumInt64(Int64 id, string description, string code = null) 
+    : base(id, description, code) { }
+  
+  #region 'explicit/implicit' operators ...
+  
+  // long -> EventType (explicit cast only - forces developer to think about it)
+  [Obsolete("Prefer mcsEventType.GetByKey(long) for clarity and future-proofing.", false)]
+  public static explicit operator mcsSmartEnumInt64<Tself>(Int64 key)
+    => GetByKey(key);
+    
+  // EventType -> long (implicit or explicit)
+  [Obsolete("Prefer mcsEventType.Field.ID for clarity and future-proofing.", false)]
+  public static implicit operator Int64(mcsSmartEnumInt64<Tself> type)
+    => type is null ? throw new ArgumentNullException(nameof(type)) : type.Key;
+  
+  [Obsolete("Prefer mcsEventType.Field.Description for clarity and future-proofing.", false)]
+  public static implicit operator string(mcsSmartEnumInt64<Tself> type)
+    => type is null ? throw new ArgumentNullException(nameof(type)) : type.Description;
+  
+  #endregion
+}
+
+// int128 -------------------------------------------------------------------------------
+public abstract class mcsSmartEnumInt128<Tself> : mcsSmartEnumBase<Tself, Int128>
+  where Tself : mcsSmartEnumInt128<Tself>
+{
+  protected mcsSmartEnumInt128(Int128 id, string description, string code = null) 
+    : base(id, description, code) { }
+  
+  #region 'explicit/implicit' operators ...
+  
+  // Int128t -> EventType (explicit cast only - forces developer to think about it)
+  [Obsolete("Prefer mcsEventType.GetByKey(Int128) for clarity and future-proofing.", false)]
+  public static explicit operator mcsSmartEnumInt128<Tself>(Int128 key)
+    => GetByKey(key);
+    
+  // EventType -> Int128 (implicit or explicit)
+  [Obsolete("Prefer mcsEventType.Field.ID for clarity and future-proofing.", false)]
+  public static implicit operator Int128(mcsSmartEnumInt128<Tself> type)
+    => type is null ? throw new ArgumentNullException(nameof(type)) : type.Key;
+  
+  [Obsolete("Prefer mcsEventType.Field.Description for clarity and future-proofing.", false)]
+  public static implicit operator string(mcsSmartEnumInt128<Tself> type)
+    => type is null ? throw new ArgumentNullException(nameof(type)) : type.Description;
+  
+  #endregion
+}
+
+// guid ---------------------------------------------------------------------------------
+public abstract class mcsSmartEnumGuid<Tself> : mcsSmartEnumBase<Tself, Guid>
+  where Tself : mcsSmartEnumGuid<Tself>
+{
+  protected mcsSmartEnumGuid(Guid id, string description, string code = null) 
+    : base(id, description, code) { }
+  
+  #region 'explicit/implicit' operators ...
+  
+  // guid -> EventType (explicit cast only - forces developer to think about it)
+  [Obsolete("Prefer mcsEventType.GetByKey(guid) for clarity and future-proofing.", false)]
+  public static explicit operator mcsSmartEnumGuid<Tself>(Guid key)
+    => GetByKey(key);
+    
+  // EventType -> guid (implicit or explicit)
+  [Obsolete("Prefer mcsEventType.Field.ID for clarity and future-proofing.", false)]
+  public static implicit operator Guid(mcsSmartEnumGuid<Tself> type)
+    => type is null ? throw new ArgumentNullException(nameof(type)) : type.Key;
+  
+  [Obsolete("Prefer mcsEventType.Field.Description for clarity and future-proofing.", false)]
+  public static implicit operator string(mcsSmartEnumGuid<Tself> type)
+    => type is null ? throw new ArgumentNullException(nameof(type)) : type.Description;
+  
+  #endregion
+}
+
+// string -------------------------------------------------------------------------------
+public abstract class mcsSmartEnumString<Tself> : mcsSmartEnumBase<Tself, string>
+  where Tself : mcsSmartEnumString<Tself>
+{
+  protected mcsSmartEnumString(string id, string description, string code = null) 
+    : base(id, description, code) { }
+  
+  #region 'explicit/implicit' operators ...
+  //
+  //// string -> EventType (explicit cast only - forces developer to think about it)
+  //[Obsolete("Prefer mcsEventType.GetByKey(string) for clarity and future-proofing.", false)]
+  //public static explicit operator mcsSmartEnumString<Tself>(string key)
+  //  => GeyByCode(key)
+  //  => GetByKey(key);
+  //  
+  //// EventType -> string (implicit or explicit)
+  //[Obsolete("Prefer mcsEventType.Field.ID for clarity and future-proofing.", false)]
+  //public static implicit operator string(mcsSmartEnumString<Tself> type)
+  //  => type is null ? throw new ArgumentNullException(nameof(type)) : type.Key;
+  //
+  //[Obsolete("Prefer mcsEventType.Field.Description for clarity and future-proofing.", false)]
+  //public static implicit operator string(mcsSmartEnumString<Tself> type)
+  //  => type is null ? throw new ArgumentNullException(nameof(type)) : type.Description;
+  //
+  #endregion
 }
 
 #endregion
 
-public sealed class mcsEventType : mcsSmartEnum<mcsEventType, int>
+public sealed class mcsEventType : mcsSmartEnumInt<mcsEventType>
 {
   private mcsEventType(int id, string description, string code = null) 
     : base(id, description, code) { }
@@ -578,46 +787,10 @@ public sealed class mcsEventType : mcsSmartEnum<mcsEventType, int>
   public static readonly mcsEventType smTicketTagSaved                           = new(324, "Support Manager Ticket Tag Saved"                          ,nameof(smTicketTagSaved));
   
   #endregion
-  
-  #region 'explicit/implicit' operators ...
-  
-  //NOTE: I'm not sure if I want to do these or not.  I'm trying to figure a way to
-  //      build as much 'enum' support for this 'smart-enum' ...
-  // int -> EventType (explicit cast only - forces developer to think about it)
-  [Obsolete("Prefer mcsEventType.GetById(int) for clarity and future-proofing.", false)]
-  public static explicit operator mcsEventType(int id)
-    => GetByID(id);
-    
-  // EventType -> int (implicit or explicit)
-  [Obsolete("Prefer mcsEventType.Field.ID for clarity and future-proofing.", false)]
-  public static implicit operator int(mcsEventType type)
-    => type is null ? throw new ArgumentNullException(nameof(type)) : type.ID;
-  
-  [Obsolete("Prefer mcsEventType.Field.Description for clarity and future-proofing.", false)]
-  public static implicit operator string(mcsEventType type)
-    => type is null ? throw new ArgumentNullException(nameof(type)) : type.Description;
-  
-  #endregion
-  
-  #region enum-like equality: compare based on ID only (ignore Description for uniqueness)
-
-  public override bool Equals(object obj)
-    => obj is mcsEventType type && Equals(type);
-
-  public bool Equals(mcsEventType other)
-    => other is not null && ID == other.ID;
-
-  public override int GetHashCode()
-    => ID.GetHashCode();
-
-  public static bool operator == (mcsEventType left, mcsEventType right)
-    => left.Equals(right);
-  
-  public static bool operator != (mcsEventType left, mcsEventType right)
-    => !left.Equals(right);
-
-  #endregion
 }
+
+
+
 
 
 #region (Option 1: sealed class ...)
@@ -699,7 +872,7 @@ public sealed class EventType
   public static readonly EventType FinTransactionTypeSaved                     = new( 51, "Fin Transaction Type Saved");
 //  public static readonly EventType phaFileSaved                                = new( 52, "PHA File Saved");                  // COMMENTED OUT in 'enum'
   public static readonly EventType MaFormSaved                                 = new( 53, "MaForm Saved");
-  public static readonly EventType StMaUnitSaved                               = new( 54, "General Certification Unit Saved");  // NOT FOUND in the 'eventTypeDescription's Select Case statement
+//  public static readonly EventType StMaUnitSaved                               = new( 54, "General Certification Unit Saved");  // NOT FOUND in the 'eventTypeDescription's Select Case statement
   public static readonly EventType StMaIncomeRangeBaseSaved                    = new( 55, "StMa Income Range Base Saved");
   
   public static readonly EventType DataExported                                = new( 56, "Data Exported");
