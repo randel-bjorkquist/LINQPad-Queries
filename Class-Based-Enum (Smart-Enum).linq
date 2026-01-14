@@ -60,11 +60,15 @@ void Main()
   // implicit conversion of 'mcsEventType.InspectionSaved' to int | ID → 1
   int id = mcsEventType.InspectionSaved;
   id.Dump("int id = mcsEventType.InspectionSaved;");
+
+  // 'mcsEventType.InspectionSaved.ID' → 1
+  id = mcsEventType.InspectionSaved.ID;
+  id.Dump("int id = mcsEventType.InspectionSaved.ID;");
   
   // implicit conversion of 'mcsEventType.InspectionSaved' to string | Description → "Inspection Saved"
   string description = mcsEventType.InspectionSaved;
   description.Dump("string description = mcsEventType.InspectionSaved;");
-  
+
   // 'mcsEventType.InspectionSaved.Description' → "Inspection Saved"
   description = mcsEventType.InspectionSaved.Description;
   description.Dump("string description = mcsEventType.InspectionSaved.Description;");
@@ -72,7 +76,8 @@ void Main()
   // 'mcsEventType.InspectionSaved.Code' → "InspectionSaved"
   string code = mcsEventType.InspectionSaved.Code;
   code.Dump("string code = mcsEventType.InspectionSaved.Code;");
-  
+
+
   //-----------------------------------------------------------------------------------------------
   // Safe lookup
   var event_type_by_id = mcsEventType.GetByID(2);
@@ -96,7 +101,7 @@ void Main()
   mcsEventType.VacatedTenantSaved.AsJsonString().Dump("mcsEventType.VacatedTenantSaved.AsJsonString()");
   
   // AsJsonObject()
-  mcsEventType.VacatedTenantSaved.AsJsonObject().Dump("mcsEventType.VacatedTenantSaved.AsJsonObject()", 0);
+  mcsEventType.VacatedTenantSaved.AsJsonObject().Dump("mcsEventType.VacatedTenantSaved.AsJsonObject()");
 }
 
 #region abstract/base mcsType
@@ -246,7 +251,7 @@ public sealed class mcsEventType : mcsSmartEnum<mcsEventType, int>
   public static readonly mcsEventType FinTransactionTypeSaved                    = new( 51, "Fin Transaction Type Saved"                                ,nameof(FinTransactionTypeSaved));
 //  public static readonly mcsEventType phaFileSaved                               = new( 52, "PHA File Saved"                                            ,nameof(phaFileSaved)); // COMMENTED OUT in 'enum'
   public static readonly mcsEventType MaFormSaved                                = new( 53, "MaForm Saved"                                              ,nameof(MaFormSaved));
-  public static readonly mcsEventType StMaUnitSaved                              = new( 54, "General Certification Unit Saved"                          ,nameof(StMaUnitSaved));  // NOT FOUND in the 'eventTypeDescription's Select Case statement
+//  public static readonly mcsEventType StMaUnitSaved                              = new( 54, "General Certification Unit Saved"                          ,nameof(StMaUnitSaved));  // NOT FOUND in the 'eventTypeDescription's Select Case statement
   public static readonly mcsEventType StMaIncomeRangeBaseSaved                   = new( 55, "StMa Income Range Base Saved"                              ,nameof(StMaIncomeRangeBaseSaved));
                                                                                                                                                          
   public static readonly mcsEventType DataExported                               = new( 56, "Data Exported"                                             ,nameof(DataExported));
@@ -579,16 +584,16 @@ public sealed class mcsEventType : mcsSmartEnum<mcsEventType, int>
   //NOTE: I'm not sure if I want to do these or not.  I'm trying to figure a way to
   //      build as much 'enum' support for this 'smart-enum' ...
   // int -> EventType (explicit cast only - forces developer to think about it)
-  [Obsolete("Prefer EventType.GetById(int) for clarity and future-proofing.", false)]
+  [Obsolete("Prefer mcsEventType.GetById(int) for clarity and future-proofing.", false)]
   public static explicit operator mcsEventType(int id)
     => GetByID(id);
     
   // EventType -> int (implicit or explicit)
-  [Obsolete("Prefer EventType.EventTypeName.ID for clarity and future-proofing.", false)]
+  [Obsolete("Prefer mcsEventType.Field.ID for clarity and future-proofing.", false)]
   public static implicit operator int(mcsEventType type)
     => type is null ? throw new ArgumentNullException(nameof(type)) : type.ID;
   
-  [Obsolete("Prefer EventType.event_type.Description for clarity and future-proofing.", false)]
+  [Obsolete("Prefer mcsEventType.Field.Description for clarity and future-proofing.", false)]
   public static implicit operator string(mcsEventType type)
     => type is null ? throw new ArgumentNullException(nameof(type)) : type.Description;
   
