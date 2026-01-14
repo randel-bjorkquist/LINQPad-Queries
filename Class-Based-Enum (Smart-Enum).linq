@@ -1,58 +1,619 @@
 <Query Kind="Program">
   <Namespace>System.Collections.Immutable</Namespace>
+  <Namespace>System.Runtime.CompilerServices</Namespace>
+  <Namespace>System.Text.Json</Namespace>
+  <RuntimeVersion>8.0</RuntimeVersion>
 </Query>
 
 void Main()
 {
-  //var fields_as_dictionary = EventType.GetAllFields(true);
-  //fields_as_dictionary.Dump("var fields_as_dictionary = EventType.GetAllFields(true);", 0);
+  #region non-generic 'EventType'
   //
-  //var fields_as_list = EventType.GetAllFields(false);
-  //fields_as_list.Dump("var fields_as_list = EventType.GetAllFields(false);", 0); 
+  //var fields = EventType.GetAllFields(true);
+  //fields.Dump("var fields = EventType.GetAllFields();", 0);
   //
-  //EventType.Properties.Dump("EventType.Properties", 0);
+  //// CASTING: explict and implicit examples
+  //EventType type = (EventType)42;                         // explicit cast
+  //type.Dump("EventType type = (EventType)42;", 0);
   //
-  //var type        = EventType.InspectionSaved;
-  //var description = type.Description;
+  //EventType.PublicBuildingSaved.Dump("EventType.PublicBuildingSaved", 0);
   //
-  //type.Dump("var type = EventType.InspectionSaved;");
+  //int id = EventType.PublicBuildingSaved;                 // implicit conversion
+  //id.Dump("int id = EventType.PublicBuildingSaved;");
+  //
+  //int id2 = (int)EventType.PublicBuildingSaved;
+  //id2.Dump("int id2 = EventType.PublicBuildingSaved;");   // explicit cast
+  //
+  //int id3 = (int)EventType.GetFieldByID(42);
+  //id3.Dump("int id3 = (int)EventType.GetFieldByID(42);"); // explicit cast
+  //
+  //string description = EventType.PublicBuildingSaved;             // implicit conversion
+  //description.Dump("string description = EventType.PublicBuildingSaved;");
+  //
+  //string description2 = (string)EventType.PublicBuildingSaved;    // explicit cast
+  //description2.Dump("string description2 = (string)EventType.PublicBuildingSaved;");
+  //
+  //string description3 = (string)EventType.GetFieldByID(42);       // explicit cast
+  //description3.Dump("string description3 = (string)EventType.GetFieldByID(42);");
+  //
+  ////.ToString() .....
+  //string description4 = EventType.PublicBuildingSaved.ToString();
+  //description4.Dump("string description4 = EventType.PublicBuildingSaved.ToString();");
+  //
+  //string description5 = EventType.PublicBuildingSaved.ToString(asJsonObject: true);
+  //description5.Dump("string description5 = EventType.PublicBuildingSaved.ToString(asJsonObject: true);");
+  //
+  ////var descriptions = EventType.GetAllFieldDescriptions();
+  ////descriptions.Dump("var descriptions = EventType.GetAllFieldDescriptions();", 0);
+  //
+  #endregion
   
-  //var event_type = EventType.GetPropertyByID(type.ID);
-  //var event_type = EventType.GetPropertyByID(1);
-  //Console.WriteLine("Event: {Descrption}", event_type.Description);  
- 
-  // CASTING: explict and implicit examples
-  EventType type = (EventType)42;                         // explicit cast
-  type.Dump("EventType type = (EventType)42;", 0);
+  //-----------------------------------------------------------------------------------------------
+  // implicit conversion of int '1' to 'mcsEventType' - specifically to 'mcsEventType.InspectionSaved'
+  var dbEventTypeID = 1;
+  var event_type    = (mcsEventType)dbEventTypeID;
   
-  EventType.PublicBuildingSaved.Dump("EventType.PublicBuildingSaved", 0);
-
-  int id = EventType.PublicBuildingSaved;                 // implicit conversion
-  id.Dump("int id = EventType.PublicBuildingSaved;");
+  event_type.Dump($"var dbEventTypeID = 1;{Environment.NewLine}var event_type = (mcsEventType)dbEventTypeID;", 0);
   
-  int id2 = (int)EventType.PublicBuildingSaved;
-  id2.Dump("int id2 = EventType.PublicBuildingSaved;");   // explicit cast
   
-  int id3 = (int)EventType.GetFieldByID(42);
-  id3.Dump("int id3 = (int)EventType.GetFieldByID(42);"); // explicit cast
-
-
-  string description = EventType.PublicBuildingSaved;             // implicit conversion
-  description.Dump("string description = EventType.PublicBuildingSaved;");
-
-  string description2 = (string)EventType.PublicBuildingSaved;    // explicit cast
-  description2.Dump("string description2 = (string)EventType.PublicBuildingSaved;");
+  //-----------------------------------------------------------------------------------------------
+  // implicit conversion of 'mcsEventType.InspectionSaved' to int | ID → 1
+  int id = mcsEventType.InspectionSaved;
+  id.Dump("int id = mcsEventType.InspectionSaved;");
   
-  string description3 = (string)EventType.GetFieldByID(42);       // explicit cast
-  description3.Dump("string description3 = (string)EventType.GetFieldByID(42);");
+  // implicit conversion of 'mcsEventType.InspectionSaved' to string | Description → "Inspection Saved"
+  string description = mcsEventType.InspectionSaved;
+  description.Dump("string description = mcsEventType.InspectionSaved;");
+  
+  // 'mcsEventType.InspectionSaved.Description' → "Inspection Saved"
+  description = mcsEventType.InspectionSaved.Description;
+  description.Dump("string description = mcsEventType.InspectionSaved.Description;");
+  
+  // 'mcsEventType.InspectionSaved.Code' → "InspectionSaved"
+  string code = mcsEventType.InspectionSaved.Code;
+  code.Dump("string code = mcsEventType.InspectionSaved.Code;");
+  
+  //-----------------------------------------------------------------------------------------------
+  // Safe lookup
+  var event_type_by_id = mcsEventType.GetByID(2);
+  event_type_by_id.Dump("var event_type_by_id = mcsEventType.GetByID(2);", 0);
 
-  //.ToString() .....
-  string description4 = EventType.PublicBuildingSaved.ToString();
-  description4.Dump("string description4 = EventType.PublicBuildingSaved.ToString();");
-
-  string description5 = EventType.PublicBuildingSaved.ToString(asJsonObject: true);
-  description5.Dump("string description5 = EventType.PublicBuildingSaved.ToString(asJsonObject: true);");
+  // All values (for dropdowns, etc.)
+  var all_event_types = mcsEventType.GetAll();  // IReadOnlyList<mcsEventType>
+  all_event_types.Dump("var all_event_types = mcsEventType.GetAll();", 0);
+  
+  var descriptions = all_event_types.Select(e => e.Description).Distinct().Order().ToList();
+  descriptions.Dump("var descriptions = all_event_types.Select(e => e.Description).Distinct().Order().ToList();", 0);
+  
+  var codes = all_event_types.Select(e => e.Code).Distinct().Order().ToList();
+  codes.Dump("var codes = all_event_types.Select(e => e.Code).Distinct().Order().ToList();", 0);
+  
+  //-----------------------------------------------------------------------------------------------
+  // ToString()
+  mcsEventType.VacatedTenantSaved.ToString().Dump("mcsEventType.VacatedTenantSaved.ToString()");
+  
+  // AsJsonString()
+  mcsEventType.VacatedTenantSaved.AsJsonString().Dump("mcsEventType.VacatedTenantSaved.AsJsonString()");
+  
+  // AsJsonObject()
+  mcsEventType.VacatedTenantSaved.AsJsonObject().Dump("mcsEventType.VacatedTenantSaved.AsJsonObject()", 0);
 }
+
+#region abstract/base mcsType
+
+public abstract class mcsSmartEnum<Tself, Tid>
+  where Tself : mcsSmartEnum<Tself, Tid>
+  where Tid   : notnull, IEquatable<Tid>
+{
+  public Tid ID             { get; }
+  public string Description { get; }
+  public string Code        { get; private set; } = "Unknown";
+  
+  protected mcsSmartEnum(Tid id, string description, string code = null)
+  {
+    ID          = id          ?? throw new ArgumentNullException(nameof(id));
+    Description = description ?? throw new ArgumentNullException(nameof(description));
+    Code        = code        ?? Code;
+  }
+  
+  #region COMMENTED OUT: partial fix for reflection and issue with calculating 'Code' values ...
+  //
+  //private static readonly Lazy<IReadOnlyDictionary<Tid, Tself>> _all = new(() => {    
+  //  RuntimeHelpers.RunClassConstructor(typeof(Tself).TypeHandle);
+  //  
+  //  var type      = typeof(Tself);    
+  //  var instances = type.GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly)
+  //                      .Where(f => f.FieldType == type)
+  //                      .Select(f => (Field: f, Value: (Tself)f.GetValue(null)!))
+  //                      .ToList();
+  //
+  //  foreach(var (field, value) in instances)
+  //  {
+  //    if(string.IsNullOrWhiteSpace(value.Code) || value.Code == "Unknown")
+  //      value.Code = field.Name;
+  //  }
+  //  
+  //  return instances.ToDictionary(i => i.Value.ID, i => i.Value);
+  //
+  //});
+  //
+  #endregion
+
+  private static readonly Lazy<IReadOnlyDictionary<Tid, Tself>> _all = new(() => {
+    return typeof(Tself).GetFields(BindingFlags.Public | BindingFlags.Static)
+                        .Where(f => f.FieldType == typeof(Tself))
+                        .Select(f => (Tself)f.GetValue(null)!)
+                        .OrderBy(f => f.ID)
+                        .ToDictionary(f => f.ID);
+  });
+
+  private static IReadOnlyDictionary<Tid, Tself> _fields => _all.Value;
+  
+  public static IReadOnlyList<Tself> GetAll()
+    => _fields.Values.ToList<Tself>()
+                     .AsReadOnly();
+
+  public static Tself GetByID(Tid id)
+    => _fields.TryGetValue(id, out Tself value) 
+        ? value 
+        : throw new ArgumentOutOfRangeException(nameof(id), $"Unknown {typeof(Tself).Name} id: {id}");
+        
+  public override string ToString()
+    => $"ID: {ID}, Description: {Description}, Code: {Code}";
+
+  /// <summary>
+  /// Returns a structured JSON-ready object. Safe for APIs, logs, and serialaztion.
+  /// </summary>
+  public virtual object AsJsonObject()
+    => new {id = ID, code = Code, description = Description};
+  
+  /// <summary>
+  /// Returns a JSON string representation. This is a convenience wrapper over AsJsonObject().
+  /// </summary>
+  public string AsJsonString(JsonSerializerOptions? options = null)
+    => JsonSerializer.Serialize(AsJsonObject(), options);
+}
+
+#endregion
+
+public sealed class mcsEventType : mcsSmartEnum<mcsEventType, int>
+{
+  private mcsEventType(int id, string description, string code = null) 
+    : base(id, description, code) { }
+
+  #region specific mcsEventType declarations ...
+
+  public static readonly mcsEventType InspectionSaved                            = new(  1, "Inspection Saved"                                          ,nameof(InspectionSaved));
+  public static readonly mcsEventType InsertFamily                               = new(  2, "Family Inserted"                                           ,nameof(InsertFamily));
+  public static readonly mcsEventType VacatedTenantSaved                         = new(  3, "Vacated Tenant Saved"                                      ,nameof(VacatedTenantSaved));
+  public static readonly mcsEventType PmPhaSaved                                 = new(  4, "Agency Saved"                                              ,nameof(PmPhaSaved));
+  public static readonly mcsEventType FamilyCertSaved                            = new(  5, "Family Cert Saved"                                         ,nameof(FamilyCertSaved));
+                                                                                                                                                        
+  public static readonly mcsEventType WaitingListApplicationSaved                = new(  6, "Waiting List Application Saved"                            ,nameof(WaitingListApplicationSaved));
+  public static readonly mcsEventType RentReasonablenessSaved                    = new(  7, "Rent Reasonableness Saved"                                 ,nameof(RentReasonablenessSaved));
+  public static readonly mcsEventType UpdateFamily                               = new(  8, "Family Updated"                                            ,nameof(UpdateFamily));
+  public static readonly mcsEventType PortabilityTenantSaved                     = new(  9, "Section 8 Portability Tenant Saved"                        ,nameof(PortabilityTenantSaved));
+  public static readonly mcsEventType PortabilityAdjustmentSaved                 = new( 10, "Section 8 Portability Adjustment Saved"                    ,nameof(PortabilityAdjustmentSaved));
+                                                                                                                                                         
+  public static readonly mcsEventType RapTrapFileGroupSaved                      = new( 11, "RAP/T-RAP File Group Saved"                                ,nameof(RapTrapFileGroupSaved));
+  public static readonly mcsEventType RapTrapFormSaved                           = new( 12, "RAP/T-RAP Form Saved"                                      ,nameof(RapTrapFormSaved));
+  public static readonly mcsEventType MCSImportedData                            = new( 13, "MCS Imported Data"                                         ,nameof(MCSImportedData));
+  public static readonly mcsEventType PortabilityMonthlyPayablesSaved            = new( 14, "Section 8 Portability Monthly Payables Saved"              ,nameof(PortabilityMonthlyPayablesSaved));
+  public static readonly mcsEventType CountySaved                                = new( 15, "County Saved"                                              ,nameof(CountySaved));
+                                                                                                                                                         
+  public static readonly mcsEventType PortabilityDisbusementSaved                = new( 16, "Section 8 Portability Disbursement Saved"                  ,nameof(PortabilityDisbusementSaved));
+  public static readonly mcsEventType TracsSaved                                 = new( 17, "TRACS Saved"                                               ,nameof(TracsSaved));
+  public static readonly mcsEventType PhaSaved                                   = new( 18, "PHA Saved"                                                 ,nameof(PhaSaved));
+  public static readonly mcsEventType ChecksSaved                                = new( 19, "Checks Saved"                                              ,nameof(ChecksSaved));
+  public static readonly mcsEventType gpIncomeLimitSaved                         = new( 20, "Income Limit Saved"                                        ,nameof(gpIncomeLimitSaved));
+                                                                                                                                                         
+  public static readonly mcsEventType MonthEndSaved                              = new( 21, "Month End Saved"                                           ,nameof(MonthEndSaved));
+  public static readonly mcsEventType LandlordSaved                              = new( 22, "Landlord Saved"                                            ,nameof(LandlordSaved));
+  public static readonly mcsEventType FamilyCertSetupSaved                       = new( 23, "Family Cert Setup Saved"                                   ,nameof(FamilyCertSetupSaved));
+  public static readonly mcsEventType HAPContractNumberSaved                     = new( 24, "HAP Contract Number Saved"                                 ,nameof(HAPContractNumberSaved));
+  public static readonly mcsEventType Section8UnitSaved                          = new( 25, "Section8 Unit Saved"                                       ,nameof(Section8UnitSaved));
+                                                                                                                                                         
+  public static readonly mcsEventType MCSLandlordImport                          = new( 26, "MCS Landlord Imported"                                     ,nameof(MCSLandlordImport));
+  public static readonly mcsEventType ComparableUnitSaved                        = new( 27, "Comparable Unit Saved"                                     ,nameof(ComparableUnitSaved));
+  public static readonly mcsEventType RequestedUnitSaved                         = new( 28, "Requested Unit Saved"                                      ,nameof(RequestedUnitSaved));
+  public static readonly mcsEventType PortabilityMasterSaved                     = new( 29, "Section 8 Portability Setup Saved"                         ,nameof(PortabilityMasterSaved));
+  public static readonly mcsEventType ResidentInfoSaved                          = new( 30, "Resident Information Saved"                                ,nameof(ResidentInfoSaved));
+                                                                                                                                                         
+  public static readonly mcsEventType ProgramSaved                               = new( 31, "Program Saved"                                             ,nameof(ProgramSaved));
+  public static readonly mcsEventType ForumMessagePosted                         = new( 32, "Forum Message Posted"                                      ,nameof(ForumMessagePosted));
+  public static readonly mcsEventType GlobalValueSaved                           = new( 33, "Global Value Saved"                                        ,nameof(GlobalValueSaved));
+  public static readonly mcsEventType FinBankSaved                               = new( 34, "Bank Saved"                                                ,nameof(FinBankSaved));
+  public static readonly mcsEventType DynamicPageSaved                           = new( 35, "Dynamic Page Saved"                                        ,nameof(DynamicPageSaved));
+                                                                                                                                                         
+  public static readonly mcsEventType FinAccountSaved                            = new( 36, "Account Saved"                                             ,nameof(FinAccountSaved));
+  public static readonly mcsEventType LandlordAdjustmentSaved                    = new( 37, "Landlord Adjustment Saved"                                 ,nameof(LandlordAdjustmentSaved));
+//  public static readonly mcsEventType                                            = new( 38, ""                                                          ,nameof());  //NOT DEFINED in 'enum'
+  public static readonly mcsEventType LandlordPayablesPosted                     = new( 39, "Landlord Payables Posted"                                  ,nameof(LandlordPayablesPosted));
+  public static readonly mcsEventType PublicUnitSaved                            = new( 40, "Public Unit Saved"                                         ,nameof(PublicUnitSaved));
+                                                                                                                                                         
+  public static readonly mcsEventType ProjectSaved                               = new( 41, "Project Saved"                                             ,nameof(ProjectSaved));
+  public static readonly mcsEventType PublicBuildingSaved                        = new( 42, "Public Building Saved"                                     ,nameof(PublicBuildingSaved));
+  public static readonly mcsEventType Section8BuildingSaved                      = new( 43, "Section 8 Building Saved"                                  ,nameof(Section8BuildingSaved));
+  public static readonly mcsEventType PortabilityTenantRentSaved                 = new( 44, "Section 8 Portability Tenant Rent Saved"                   ,nameof(PortabilityTenantRentSaved));
+  public static readonly mcsEventType tracsMAT30Saved                            = new( 45, "Tracs MAT30 Saved"                                         ,nameof(tracsMAT30Saved));
+                                                                                                                                                         
+  public static readonly mcsEventType tracsMonthlySubmissionFileSaved            = new( 46, "Tracs Monthly Submission File Saved"                       ,nameof(tracsMonthlySubmissionFileSaved));
+  public static readonly mcsEventType FinDocumentSaved                           = new( 47, "Financial Document Saved"                                  ,nameof(FinDocumentSaved));
+  public static readonly mcsEventType FinControlGroupSaved                       = new( 48, "Financial Control Group Saved"                             ,nameof(FinControlGroupSaved));
+  public static readonly mcsEventType FinTransactionSaved                        = new( 49, "Financial Transaction Saved"                               ,nameof(FinTransactionSaved));
+  public static readonly mcsEventType FinGlAccountSaved                          = new( 50, "Fin Gl Account Saved"                                      ,nameof(FinGlAccountSaved));
+                                                                                                                                                         
+  public static readonly mcsEventType FinTransactionTypeSaved                    = new( 51, "Fin Transaction Type Saved"                                ,nameof(FinTransactionTypeSaved));
+//  public static readonly mcsEventType phaFileSaved                               = new( 52, "PHA File Saved"                                            ,nameof(phaFileSaved)); // COMMENTED OUT in 'enum'
+  public static readonly mcsEventType MaFormSaved                                = new( 53, "MaForm Saved"                                              ,nameof(MaFormSaved));
+  public static readonly mcsEventType StMaUnitSaved                              = new( 54, "General Certification Unit Saved"                          ,nameof(StMaUnitSaved));  // NOT FOUND in the 'eventTypeDescription's Select Case statement
+  public static readonly mcsEventType StMaIncomeRangeBaseSaved                   = new( 55, "StMa Income Range Base Saved"                              ,nameof(StMaIncomeRangeBaseSaved));
+                                                                                                                                                         
+  public static readonly mcsEventType DataExported                               = new( 56, "Data Exported"                                             ,nameof(DataExported));
+//  public static readonly mcsEventType FamilyCertSubmissionFileSaved              = new( 57, "50058 Submission File"                                     ,nameof(FamilyCertSubmissionFileSaved));  // COMMENTED OUT in 'enum'
+  public static readonly mcsEventType PhaUserSaved                               = new( 58, "PHA User Saved"                                            ,nameof(PhaUserSaved));
+  public static readonly mcsEventType pmPhaAccountSaved                          = new( 59, "Agency Account Saved"                                      ,nameof(pmPhaAccountSaved));
+  public static readonly mcsEventType GeneralLedgerJournalEntrySaved             = new( 60, "General Ledger Journal Entry Saved"                        ,nameof(GeneralLedgerJournalEntrySaved));
+                                                                                                                                                         
+  public static readonly mcsEventType finHoldReasonSaved                         = new( 61, "finHoldReason Saved"                                       ,nameof(finHoldReasonSaved));
+  public static readonly mcsEventType finTransPartSelectionSaved                 = new( 62, "finTransactionPartSelection Saved"                         ,nameof(finTransPartSelectionSaved));
+  public static readonly mcsEventType stMaSetupSaved                             = new( 63, "stMaSetup Saved"                                           ,nameof(stMaSetupSaved));
+  public static readonly mcsEventType finAdminFee                                = new( 64, "finAdminFee Saved"                                         ,nameof(finAdminFee));
+  public static readonly mcsEventType stMaPaymentStandardTownSaved               = new( 65, "stMaPaymentStandardTown Saved"                             ,nameof(stMaPaymentStandardTownSaved));
+                                                                                                                                                         
+  public static readonly mcsEventType stMaPaymentStandardBedSaved                = new( 66, "stMaPaymentStandardBed Saved"                              ,nameof(stMaPaymentStandardBedSaved));
+  public static readonly mcsEventType hapScheduleAdjustmentUpdate                = new( 67, "HAP Schedule Adjustment Update"                            ,nameof(hapScheduleAdjustmentUpdate));
+  public static readonly mcsEventType imRoomTypeDefinitionSaved                  = new( 68, "Inspection Manager Room Type Definition Saved"             ,nameof(imRoomTypeDefinitionSaved));
+  public static readonly mcsEventType imQuestionTypeDefinitionSaved              = new( 69, "Inspection Manager Question Type Definition Saved"         ,nameof(imQuestionTypeDefinitionSaved));
+  public static readonly mcsEventType imFailureTypeDefinitionSaved               = new( 70, "Inspection Manager Failure Type Definition Saved"          ,nameof(imFailureTypeDefinitionSaved));
+                                                                                                                                                         
+  public static readonly mcsEventType imFormTypeSaved                            = new( 71, "Inspection Manager Form Type Saved"                        ,nameof(imFormTypeSaved));
+  public static readonly mcsEventType imInspectionSaved                          = new( 72, "Inspection Manager Inspection Saved"                       ,nameof(imInspectionSaved));
+  public static readonly mcsEventType vendorSaved                                = new( 73, "Vendor Saved"                                              ,nameof(vendorSaved));
+//  public static readonly mcsEventType distributionSaved                          = new( 74, "Distribution Saved"                                        ,nameof(distributionSaved));  // NOT FOUND in the 'eventTypeDescription's Select Case statement
+//  public static readonly mcsEventType stCtUnitSaved                              = new( 75, "stCtUnitSaved"                                             ,nameof(stCtUnitSaved));  // COMMENTED OUT in 'enum'
+                                                                                                                                                         
+  public static readonly mcsEventType saveSignature                              = new( 76, "Signature Saved"                                           ,nameof(saveSignature));
+  public static readonly mcsEventType phMiscChargesSaved                         = new( 77, "PH Misc Charges Saved"                                     ,nameof(phMiscChargesSaved));
+  public static readonly mcsEventType finPaymentTermsSaved                       = new( 78, "Payment Terms Saved"                                       ,nameof(finPaymentTermsSaved));
+  public static readonly mcsEventType tracsSetupSaved                            = new( 79, "TRACS Setup Saved"                                         ,nameof(tracsSetupSaved));
+  public static readonly mcsEventType landlordsMerged                            = new( 80, "Landlords Merged"                                          ,nameof(landlordsMerged));
+                                                                                                                                                         
+  public static readonly mcsEventType finPaymentScheduleSaved                    = new( 81, "Payment Schedule Saved"                                    ,nameof(finPaymentScheduleSaved));
+  public static readonly mcsEventType waitingListLotteryProcess                  = new( 82, "Waiting List Lottery Process"                              ,nameof(waitingListLotteryProcess));
+  public static readonly mcsEventType recurringInvoiceSaved                      = new( 83, "Recurring Invoice Saved"                                   ,nameof(recurringInvoiceSaved));
+  public static readonly mcsEventType imCustomQuestionTypeDefinitionSaved        = new( 84, "Inspection Manager Custom Question Type Definition Saved"  ,nameof(imCustomQuestionTypeDefinitionSaved));
+  public static readonly mcsEventType glReportGroupSaved                         = new( 85, "General Ledger Report Group Saved"                         ,nameof(glReportGroupSaved));
+                                                                                                                                                         
+  public static readonly mcsEventType phRepaymentAgreementSaved                  = new( 86, "Tenant Repayment Agreement Saved"                          ,nameof(phRepaymentAgreementSaved));
+  public static readonly mcsEventType FinOpenItemRelationSaved                   = new( 87, "Financial Open Item Relation Saved"                        ,nameof(FinOpenItemRelationSaved));
+  public static readonly mcsEventType fmCustomValueSetupSaved                    = new( 88, "Family Custom Value Setup Saved"                           ,nameof(fmCustomValueSetupSaved));
+  public static readonly mcsEventType smTicketSaved                              = new( 89, "Support Manager Ticket Saved"                              ,nameof(smTicketSaved));
+  public static readonly mcsEventType smUserSaved                                = new( 90, "Support Manager User Saved"                                ,nameof(smUserSaved));
+                                                                                                                                                         
+  public static readonly mcsEventType woWorkOrderSaved                           = new( 91, "Work Order Saved"                                          ,nameof(woWorkOrderSaved));
+  public static readonly mcsEventType woAssetSaved                               = new( 92, "Work Order Asset Saved"                                    ,nameof(woAssetSaved));
+  public static readonly mcsEventType woInventorySaved                           = new( 93, "Work Order Inventory Saved"                                ,nameof(woInventorySaved));
+  public static readonly mcsEventType woTaskSaved                                = new( 94, "Work Order Task Saved"                                     ,nameof(woTaskSaved));
+  public static readonly mcsEventType woAssetMaintenanceSaved                    = new( 95, "Work Order Asset Maintenance Saved"                        ,nameof(woAssetMaintenanceSaved));
+                                                                                                                                                         
+  public static readonly mcsEventType woEmployeeAdjustmentSaved                  = new( 96, "Work Order Employee Adjustment Saved"                      ,nameof(woEmployeeAdjustmentSaved));
+  public static readonly mcsEventType woInventoryAdjustmentSaved                 = new( 97, "Work Order Inventory Adjustment Saved"                     ,nameof(woInventoryAdjustmentSaved));
+  public static readonly mcsEventType woSetupAssetTypeSaved                      = new( 98, "Work Order Setup Asset Type Saved"                         ,nameof(woSetupAssetTypeSaved));
+  public static readonly mcsEventType woSetupNumberSaved                         = new( 99, "Work Order Setup Number Saved"                             ,nameof(woSetupNumberSaved));
+  public static readonly mcsEventType woSetupUnitOfMeasureSaved                  = new(100, "Work Order Setup Unit Of Measure Saved"                    ,nameof(woSetupUnitOfMeasureSaved));
+                                                                                                                                                         
+  public static readonly mcsEventType woSetupInventoryTypeSaved                  = new(101, "Work Order Setup Inventory Type Saved"                     ,nameof(woSetupInventoryTypeSaved));
+  public static readonly mcsEventType woSetupInventoryLocationSaved              = new(102, "Work Order Setup Inventory Location Saved"                 ,nameof(woSetupInventoryLocationSaved));
+  public static readonly mcsEventType glTemplateDocSaved                         = new(103, "glTemplateDoc Saved"                                       ,nameof(glTemplateDocSaved));
+  public static readonly mcsEventType woInventoryUpdateSaved                     = new(104, "Work Order Inventory Update Saved"                         ,nameof(woInventoryUpdateSaved));
+  public static readonly mcsEventType glProjectGroupSaved                        = new(105, "glProjectGroup Saved"                                      ,nameof(glProjectGroupSaved));
+                                                                                                                                                         
+  public static readonly mcsEventType woSetupDefaultCommentsSaved                = new(106, "Work Order Setup Default Comments Saved"                   ,nameof(woSetupDefaultCommentsSaved));
+  public static readonly mcsEventType rapTrapSetupSaved                          = new(107, "Rap Trap Setup Saved"                                      ,nameof(rapTrapSetupSaved));
+  public static readonly mcsEventType familiesMerged                             = new(108, "Families Merged"                                           ,nameof(familiesMerged));
+  public static readonly mcsEventType woSetupLaborTypeSaved                      = new(109, "Work Order Setup Labor Type Saved"                         ,nameof(woSetupLaborTypeSaved));
+  public static readonly mcsEventType uaScheduleTypeSaved                        = new(110, "Utility Allowance ScheduleType Saved"                      ,nameof(uaScheduleTypeSaved));
+                                                                                                                                                         
+  public static readonly mcsEventType uaScheduleSaved                            = new(111, "Utility Allowance Schedule Saved"                          ,nameof(uaScheduleSaved));
+  public static readonly mcsEventType uaScheduleBedSizeSaved                     = new(112, "Utility Allowance ScheduleBedSize Saved"                   ,nameof(uaScheduleBedSizeSaved));
+  public static readonly mcsEventType zipGroupSaved                              = new(113, "Zip Group Saved"                                           ,nameof(zipGroupSaved));
+  public static readonly mcsEventType zipGroupItemSaved                          = new(114, "Zip Group Item Saved"                                      ,nameof(zipGroupItemSaved));
+  public static readonly mcsEventType poPurchaseOrderSaved                       = new(115, "Purchase Order Saved"                                      ,nameof(poPurchaseOrderSaved));
+                                                                                                                                                         
+  public static readonly mcsEventType poLineItemSaved                            = new(116, "Purchase Order Line Item Saved"                            ,nameof(poLineItemSaved));
+  public static readonly mcsEventType woSetupReportItemSaved                     = new(117, "Work Order Setup Report Item Saved"                        ,nameof(woSetupReportItemSaved));
+  public static readonly mcsEventType paymentStandardTypeSaved                   = new(118, "Payment Standard Type Saved"                               ,nameof(paymentStandardTypeSaved));
+  public static readonly mcsEventType phaUserSignatureSaved                      = new(119, "Pha User Signature Saved"                                  ,nameof(phaUserSignatureSaved));
+  public static readonly mcsEventType finStatementSetupSaved                     = new(120, "Financial Statement Setup Saved"                           ,nameof(finStatementSetupSaved));
+                                                                                                                                                         
+  public static readonly mcsEventType glPayrollReportTypeSetupSaved              = new(121, "Payroll Report Type Setup Saved"                           ,nameof(glPayrollReportTypeSetupSaved));
+  public static readonly mcsEventType glPayrollTypeSetupSaved                    = new(122, "Payroll Type Setup Saved"                                  ,nameof(glPayrollTypeSetupSaved));
+  public static readonly mcsEventType glPayrollSummarySaved                      = new(123, "Payroll Summary Saved"                                     ,nameof(glPayrollSummarySaved));
+  public static readonly mcsEventType glPayrollDistributionSaved                 = new(124, "Payroll Distribution Saved"                                ,nameof(glPayrollDistributionSaved));
+  public static readonly mcsEventType glPayrollEmployeeDistributionSaved         = new(125, "Payroll Employee Distribution Saved"                       ,nameof(glPayrollEmployeeDistributionSaved));
+                                                                                                                                                         
+  public static readonly mcsEventType vmsTypeSaved                               = new(126, "VMS Type Saved"                                            ,nameof(vmsTypeSaved));
+  public static readonly mcsEventType glPayrollDistributionFieldNumberSaved      = new(127, "Payroll Distribution Field Number Saved"                   ,nameof(glPayrollDistributionFieldNumberSaved));
+  public static readonly mcsEventType meterReadingSaved                          = new(128, "Meter Reading Saved"                                       ,nameof(meterReadingSaved));
+  public static readonly mcsEventType vmsEffectiveDateSaved                      = new(129, "VMS Effective Date Saved"                                  ,nameof(vmsEffectiveDateSaved));
+  public static readonly mcsEventType phHoEffectiveAdjustmentsSaved              = new(130, "PH Homeownership Effective Adjustments"                    ,nameof(phHoEffectiveAdjustmentsSaved));
+                                                                                                                                                         
+  public static readonly mcsEventType phHoAdjustmentsToBalanceSaved              = new(131, "PH Homeownership Adjustments to Balance"                   ,nameof(phHoAdjustmentsToBalanceSaved));
+  public static readonly mcsEventType wlStatusSaved                              = new(132, "WL Status Saved"                                           ,nameof(wlStatusSaved));
+  public static readonly mcsEventType glJESTemplateSaved                         = new(133, "GL Journal Entry Simple Template Saved"                    ,nameof(glJESTemplateSaved));
+  public static readonly mcsEventType glJESTemplateDetailSaved                   = new(134, "GL Journal Entry Simple Template Detail Saved"             ,nameof(glJESTemplateDetailSaved));
+  public static readonly mcsEventType voidedCheckSaved                           = new(135, "Voided Check Saved"                                        ,nameof(voidedCheckSaved));
+                                                                                                                                                         
+  public static readonly mcsEventType recertPacketSetupSaved                     = new(136, "Recertification Packet Setup Saved"                        ,nameof(recertPacketSetupSaved));
+  public static readonly mcsEventType rfParticipatingProgramSaved                = new(137, "RF Participating Program Saved"                            ,nameof(rfParticipatingProgramSaved));
+  public static readonly mcsEventType woReportItemSaved                          = new(138, "Work Order Report Item Saved"                              ,nameof(woReportItemSaved));
+  public static readonly mcsEventType projectLookupCodeSaved                     = new(139, "Project Lookup Code Saved"                                 ,nameof(projectLookupCodeSaved));
+  public static readonly mcsEventType payeeSaved                                 = new(140, "Payee Saved"                                               ,nameof(payeeSaved));
+                                                                                                                                                         
+  public static readonly mcsEventType payeeTemplateSaved                         = new(141, "Payee Template Saved"                                      ,nameof(payeeTemplateSaved));
+  public static readonly mcsEventType familyCertSubmissionErrorSaved             = new(142, "Family Cert Submission Error Saved"                        ,nameof(familyCertSubmissionErrorSaved));
+//  public static readonly mcsEventType orderingProductSaved                       = new(143, "Forms Ordering Product Saved"                            ,nameof(orderingProductSaved));  // COMMENTED OUT in 'enum'
+//  public static readonly mcsEventType orderingOrderSaved                         = new(144, "Forms Ordering Order Saved"                              ,nameof(orderingOrderSaved));  // COMMENTED OUT in 'enum'
+//  public static readonly mcsEventType orderingOrderDetailsSaved                  = new(145, "Forms Ordering Order Details Saved"                      ,nameof(orderingOrderDetailsSaved));  // COMMENTED OUT in 'enum'
+                                                                                                                                                         
+  public static readonly mcsEventType phUtilityBillingSaved                      = new(146, "PH Utility Billing Saved"                                  ,nameof(phUtilityBillingSaved));
+  public static readonly mcsEventType diFolderSaved                              = new(147, "Document Imaging Folder Saved"                             ,nameof(diFolderSaved));
+  public static readonly mcsEventType diPHADocumentSaved                         = new(148, "PHA Document Saved"                                        ,nameof(diPHADocumentSaved));
+  public static readonly mcsEventType diUserDocumentSaved                        = new(149, "User Document Saved"                                       ,nameof(diUserDocumentSaved));
+  public static readonly mcsEventType woInventoryExpensingSetupSaved             = new(150, "Work Order Inventory Expensing Setup Saved"                ,nameof(woInventoryExpensingSetupSaved));
+                                                                                                                                                         
+  public static readonly mcsEventType woInventoryExpensingSaved                  = new(151, "Work Order Inventory Expensing Saved"                      ,nameof(woInventoryExpensingSaved));
+  public static readonly mcsEventType fmAppointmentSaved                         = new(152, "Family Appointment Saved"                                  ,nameof(fmAppointmentSaved));
+  public static readonly mcsEventType phDepositMarginSetupSaved                  = new(153, "Deposit Ticket Margin Setup Saved"                         ,nameof(phDepositMarginSetupSaved));
+  public static readonly mcsEventType communityServiceDetailSaved                = new(154, "Community Service Detail Saved"                            ,nameof(communityServiceDetailSaved));
+  public static readonly mcsEventType glAccountReconciliationSaved               = new(155, "Account Reconciliation Saved"                              ,nameof(glAccountReconciliationSaved));
+                                                                                                                                                         
+  public static readonly mcsEventType genericNoteSaved                           = new(156, "Generic Note Saved"                                        ,nameof(genericNoteSaved));
+  public static readonly mcsEventType genericNoteReminderSaved                   = new(157, "Generic Note Reminder Saved"                               ,nameof(genericNoteReminderSaved));
+  public static readonly mcsEventType gnNoteRemindAllSaved                       = new(158, "gnNoteRemindAll Saved"                                     ,nameof(gnNoteRemindAllSaved));
+  public static readonly mcsEventType diSignatureDetailSaved                     = new(159, "Document Imaging Signature Detail Saved"                   ,nameof(diSignatureDetailSaved));
+  public static readonly mcsEventType flatRentAreaTypeSaved                      = new(160, "Flat Rent Area Type Saved"                                 ,nameof(flatRentAreaTypeSaved));
+                                                                                                                                                         
+  public static readonly mcsEventType flatRentAreaDateSaved                      = new(161, "Flat Rent Area Date Saved"                                 ,nameof(flatRentAreaDateSaved));
+  public static readonly mcsEventType tracsHistoricalSaved                       = new(162, "TRACS Historical Saved"                                    ,nameof(tracsHistoricalSaved));
+  public static readonly mcsEventType annualHQSCertFormSaved                     = new(163, "Annual HQS Form Saved"                                     ,nameof(annualHQSCertFormSaved));
+  public static readonly mcsEventType staticFileSaved                            = new(164, "Static File Saved"                                         ,nameof(staticFileSaved));
+  public static readonly mcsEventType mspTaskSaved                               = new(165, "Multi-Step Task Saved"                                     ,nameof(mspTaskSaved));
+                                                                                                                                                         
+  public static readonly mcsEventType mspStepSaved                               = new(166, "Multi-Step Step Saved"                                     ,nameof(mspStepSaved));
+  public static readonly mcsEventType perFormAutoAdjustmentSave                  = new(167, "Per-Form Auto Adjustment Save"                             ,nameof(perFormAutoAdjustmentSave));
+  public static readonly mcsEventType wlApplicantQuestionSaved                   = new(168, "Applicant Question Saved"                                  ,nameof(wlApplicantQuestionSaved));
+  public static readonly mcsEventType wlApplicantFullAppAnswerSaved              = new(169, "Applicant Question Full App Answer Saved"                  ,nameof(wlApplicantFullAppAnswerSaved));
+  public static readonly mcsEventType ocOnlineClassPHAUserSaved                  = new(170, "Online Class PHA User Saved"                               ,nameof(ocOnlineClassPHAUserSaved));
+                                                                                                                                                         
+  public static readonly mcsEventType repaymentAgreementTypeSaved                = new(171, "Repayment Agreement Type Saved"                            ,nameof(repaymentAgreementTypeSaved));
+  public static readonly mcsEventType fairMarketRentAreaTypeSaved                = new(172, "Fair Market Rent Area Saved"                               ,nameof(fairMarketRentAreaTypeSaved));
+  public static readonly mcsEventType fairMarketRentAmountSaved                  = new(173, "Fair Market Rent Amount Saved"                             ,nameof(fairMarketRentAmountSaved));
+  public static readonly mcsEventType prRequisitionSaved                         = new(174, "Purchase Requisition Saved"                                ,nameof(prRequisitionSaved));
+  public static readonly mcsEventType poShippingAddressSaved                     = new(175, "Purchase Order Shipping Address Saved"                     ,nameof(poShippingAddressSaved));
+                                                                                                                                                         
+  public static readonly mcsEventType prApprovalSetupSaved                       = new(176, "PR Approval Setup Saved"                                   ,nameof(prApprovalSetupSaved));
+  public static readonly mcsEventType prApprovalCostPhaUserSaved                 = new(177, "PR Approval Cost Pha User Saved"                           ,nameof(prApprovalCostPhaUserSaved));
+  public static readonly mcsEventType prApprovalSaved                            = new(178, "PR Approval Saved"                                         ,nameof(prApprovalSaved));
+  public static readonly mcsEventType tracsRepAgreementLinkSaved                 = new(179, "Repayment Agreement Link Saved"                            ,nameof(tracsRepAgreementLinkSaved));
+  public static readonly mcsEventType fssBalanceAdjustmentSaved                  = new(180, "FSS Balance Adjustment Saved"                              ,nameof(fssBalanceAdjustmentSaved));
+                                                                                                                                                         
+  public static readonly mcsEventType vendorContractSaved                        = new(181, "Vendor Contract Saved"                                     ,nameof(vendorContractSaved));
+//  public static readonly mcsEventType familyNotificationSetupSaved               = new(182, "Family Notification Setup Saved"                           ,nameof(familyNotificationSetupSaved)); // NOT FOUND in the 'eventTypeDescription's Select Case statement
+  public static readonly mcsEventType familyCertMasterVoucherExtensionSaved      = new(183, "Family Cert Voucher Extension Saved"                       ,nameof(familyCertMasterVoucherExtensionSaved));
+  public static readonly mcsEventType apSelectForPayementSaved                   = new(184, "AP Select For Payment Saved"                               ,nameof(apSelectForPayementSaved));
+  public static readonly mcsEventType familyCertContractRentIncreaseSaved        = new(185, "Family Cert Contract Rent Increase"                        ,nameof(familyCertContractRentIncreaseSaved));
+                                                                                                                                                         
+  public static readonly mcsEventType backgroundCheckRequestSaved                = new(186, "Background Check Request Saved"                            ,nameof(backgroundCheckRequestSaved));
+  public static readonly mcsEventType fmPublicSafetyIncidentSaved                = new(187, "Public Safety Incident Saved"                              ,nameof(fmPublicSafetyIncidentSaved));
+  public static readonly mcsEventType update1099BatchSaved                       = new(188, "Update 1099 Batch Saved"                                   ,nameof(update1099BatchSaved));
+  public static readonly mcsEventType insert1099BatchSaved                       = new(189, "Insert 1099 Batch Saved"                                   ,nameof(insert1099BatchSaved));
+  public static readonly mcsEventType woBillingPosted                            = new(190, "Post Work Order Billing"                                   ,nameof(woBillingPosted));
+                                                                                                                                                         
+  public static readonly mcsEventType fssItspGoalSaved                           = new(191, "FSS ITSP Goal Saved"                                       ,nameof(fssItspGoalSaved));
+  public static readonly mcsEventType fssItspNoteSaved                           = new(192, "FSS ITSP Note Saved"                                       ,nameof(fssItspNoteSaved));
+  public static readonly mcsEventType certNotificationSaved                      = new(193, "Notification Saved"                                        ,nameof(certNotificationSaved));
+  public static readonly mcsEventType certNotificationProcessSaved               = new(194, "Notification Process Saved"                                ,nameof(certNotificationProcessSaved));
+  public static readonly mcsEventType finUtilityDistributionSaved                = new(195, "Utility Distribution Saved"                                ,nameof(finUtilityDistributionSaved));
+                                                                                                                                                         
+  public static readonly mcsEventType communityServiceRecurringSaved             = new(196, "Community Service Recurring Saved"                         ,nameof(communityServiceRecurringSaved));
+  public static readonly mcsEventType noteTypeSaved                              = new(197, "Note Type Saved"                                           ,nameof(noteTypeSaved));
+  public static readonly mcsEventType phaPortalSetupSaved                        = new(198, "Portal Management Setup Saved"                             ,nameof(phaPortalSetupSaved));
+  public static readonly mcsEventType phaPortalFamilyOptionsSaved                = new(199, "Portal Family Options Saved"                               ,nameof(phaPortalFamilyOptionsSaved));
+//  public static readonly mcsEventType phaFamilyPortalPermissionSetup             = new(200, "Family Portal Permission Setup"                            ,nameof(phaFamilyPortalPermissionSetup));  // COMMENTED OUT in 'enum'
+                                                                                                                                                         
+  public static readonly mcsEventType finTransPartSelectionByProjectSaved        = new(201, "finTransactionPartSelectionByProject Saved"                ,nameof(finTransPartSelectionByProjectSaved));
+  public static readonly mcsEventType glExportFileSaved                          = new(202, "GL Export File Saved"                                      ,nameof(glExportFileSaved));
+  public static readonly mcsEventType famCertUtilScheduleTypeSaved               = new(203, "FamilyCertUtilityScheduleType Saved"                       ,nameof(famCertUtilScheduleTypeSaved));
+  public static readonly mcsEventType famCertUtilScheduleDateSaved               = new(204, "FamilyCertUtilityScheduleDate Saved"                       ,nameof(famCertUtilScheduleDateSaved));
+  public static readonly mcsEventType stMaUtilityScheduleTypeSaved               = new(205, "StMaUtilityScheduleType Saved"                             ,nameof(stMaUtilityScheduleTypeSaved));
+                                                                                                                                                         
+  public static readonly mcsEventType stMaUtilityScheduleDateSaved               = new(206, "StMaUtilityScheduleDate Saved"                             ,nameof(stMaUtilityScheduleDateSaved));
+  public static readonly mcsEventType phaPortalOppAccSetupSaved                  = new(207, "phaPortalOppAccSetup Saved"                                ,nameof(phaPortalOppAccSetupSaved));
+  public static readonly mcsEventType phaPortalOppAccUserSaved                   = new(208, "phaPortalOppAccUser Saved"                                 ,nameof(phaPortalOppAccUserSaved));
+  public static readonly mcsEventType phaPortalOppCustomerSaved                  = new(209, "phaPortalOppCustomer Saved"                                ,nameof(phaPortalOppCustomerSaved));
+  public static readonly mcsEventType phaPortalOppBatchSaved                     = new(210, "phaPortalOppBatch Saved"                                   ,nameof(phaPortalOppBatchSaved));
+                                                                                                                                                         
+  public static readonly mcsEventType phaPortalOppPaymentSaved                   = new(211, "phaPortalOppPayment Saved"                                 ,nameof(phaPortalOppPaymentSaved));
+  public static readonly mcsEventType phaPortalOppPaymentDetailSaved             = new(212, "phaPortalOppPaymentDetail Saved"                           ,nameof(phaPortalOppPaymentDetailSaved));
+  public static readonly mcsEventType sohaDhcdTransmissionFileSaved              = new(213, "SOHA EOHLC Transmission File Saved"                        ,nameof(sohaDhcdTransmissionFileSaved));
+  public static readonly mcsEventType phaPortalMcConversationSaved               = new(214, "PortalConversation Saved"                                  ,nameof(phaPortalMcConversationSaved));
+  public static readonly mcsEventType phaPortalMcAttachmentSaved                 = new(215, "PortalAttachment Saved"                                    ,nameof(phaPortalMcAttachmentSaved));
+                                                                                                                                                         
+  public static readonly mcsEventType phaPortalMcMessageSaved                    = new(216, "PortalMessage Saved"                                       ,nameof(phaPortalMcMessageSaved));
+  public static readonly mcsEventType woSetupEmployeeScheduleSaved               = new(217, "woSetupEmployeeSchedule Saved"                             ,nameof(woSetupEmployeeScheduleSaved));
+  public static readonly mcsEventType woSetupEmployeeScheduleDeSaved             = new(218, "woSetupEmployeeScheduleDe Saved"                           ,nameof(woSetupEmployeeScheduleDeSaved));
+  public static readonly mcsEventType unitTurnoverSaved                          = new(219, "unitTurnover Saved"                                        ,nameof(unitTurnoverSaved));
+  public static readonly mcsEventType certRequestSaved                           = new(220, "certRequest Saved"                                         ,nameof(certRequestSaved));
+                                                                                                                                                         
+  public static readonly mcsEventType phaPortalLandlordOptionsSetupSaved         = new(221, "Portal Landlord Options Saved"                             ,nameof(phaPortalLandlordOptionsSetupSaved));
+  public static readonly mcsEventType stMaHomeRentIncomeScheduleTypeSaved        = new(222, "stMaHomeRentIncomeScheduleType Saved"                      ,nameof(stMaHomeRentIncomeScheduleTypeSaved));
+  public static readonly mcsEventType stMaHomeRentIncomeScheduleDateSaved        = new(223, "stMaHomeRentIncomeScheduleDate Saved"                      ,nameof(stMaHomeRentIncomeScheduleDateSaved));
+  public static readonly mcsEventType phaPortalLandlordSaved                     = new(224, "Portal Landlord Saved"                                     ,nameof(phaPortalLandlordSaved));
+  public static readonly mcsEventType certFormReviewSaved                        = new(225, "Certification Form Review Saved"                           ,nameof(certFormReviewSaved));
+                                                                                                                                                         
+  public static readonly mcsEventType invoiceSavedAvidInvoiceImport              = new(226, "Invoice Saved From Avid Invoice Import"                    ,nameof(invoiceSavedAvidInvoiceImport));
+  public static readonly mcsEventType phaPortalApplicantOptionsSaved             = new(227, "Portal Applicant Saved"                                    ,nameof(phaPortalApplicantOptionsSaved));
+  public static readonly mcsEventType glTrialBalanceWildCardSaved                = new(228, "GL Trial Balance Wild Card Saved"                          ,nameof(glTrialBalanceWildCardSaved));
+  public static readonly mcsEventType certFinishFormPacketSetupSaved             = new(229, "Cert Finish Form Packet Setup Saved"                       ,nameof(certFinishFormPacketSetupSaved));
+  public static readonly mcsEventType familyCertChangeOfOwnershipSaved           = new(230, "Family Cert Change of Ownership"                           ,nameof(familyCertChangeOfOwnershipSaved));
+                                                                                                                                                         
+  public static readonly mcsEventType certSignatureRequestSaved                  = new(231, "Cert Signature Request Saved"                              ,nameof(certSignatureRequestSaved));
+  public static readonly mcsEventType invoiceSavedInvoiceImport                  = new(232, "invoice Saved Invoice Import"                              ,nameof(invoiceSavedInvoiceImport));
+  public static readonly mcsEventType woPhaSetupSaved                            = new(233, "work order pha setup saved"                                ,nameof(woPhaSetupSaved));
+  public static readonly mcsEventType diUploadApi                                = new(234, "API Uploaded Document"                                     ,nameof(diUploadApi));
+  public static readonly mcsEventType apVendorPhaSetupSaved                      = new(235, "ap vendor pha setup saved"                                 ,nameof(apVendorPhaSetupSaved));
+                                                                                                                                                         
+  public static readonly mcsEventType ecEmailAddressSaved                        = new(236, "ec Email Address Saved"                                    ,nameof(ecEmailAddressSaved));
+  public static readonly mcsEventType woSetupPrioritySaved                       = new(237, "Work Order Setup Priority Saved"                           ,nameof(woSetupPrioritySaved));
+  public static readonly mcsEventType woSetupRequestedBySaved                    = new(238, "Work Order Setup Requested By Saved"                       ,nameof(woSetupRequestedBySaved));
+  public static readonly mcsEventType woSetupConfigurationSaved                  = new(239, "Work Order Setup Configuration Saved"                      ,nameof(woSetupConfigurationSaved));
+  public static readonly mcsEventType familyCertMassCreateBatchSaved             = new(240, "Family Cert Mass Create Batch Saved"                       ,nameof(familyCertMassCreateBatchSaved));
+                                                                                                                                                         
+  public static readonly mcsEventType familyCertPaymentStandardChangeSaved       = new(241, "Family Cert Payment Standard Change Saved"                 ,nameof(familyCertPaymentStandardChangeSaved));
+  public static readonly mcsEventType familyCertEndOfParticipationSaved          = new(242, "Family Cert End of Participation Saved"                    ,nameof(familyCertEndOfParticipationSaved));
+  public static readonly mcsEventType glDepreciableAssetTypeSaved                = new(243, "GL Depreciable Asset Type Saved"                           ,nameof(glDepreciableAssetTypeSaved));
+  public static readonly mcsEventType familyCertMoveOutReasonSaved               = new(244, "50058 Move Out Reason Saved"                               ,nameof(familyCertMoveOutReasonSaved));
+  public static readonly mcsEventType stMaMoveOutReasonSaved                     = new(245, "General Move Out Reason Saved"                             ,nameof(stMaMoveOutReasonSaved));
+                                                                                                                                                         
+  public static readonly mcsEventType familyCertPhaSetupSaved                    = new(246, "50058 PHA Setup Saved"                                     ,nameof(familyCertPhaSetupSaved));
+  public static readonly mcsEventType familyCertSetupScheduleTypeSaved           = new(247, "Setup Schedule Type Saved"                                 ,nameof(familyCertSetupScheduleTypeSaved));
+  public static readonly mcsEventType familyCertSetupScheduleEffectiveDateSaved  = new(248, "Setup Schedule Effective Date Saved"                       ,nameof(familyCertSetupScheduleEffectiveDateSaved));
+  public static readonly mcsEventType mergeTemplateSaved                         = new(249, "Letter Merge Template Saved"                               ,nameof(mergeTemplateSaved));
+  public static readonly mcsEventType hipSubmissionFileSaved                     = new(250, "HIP Submission File Saved"                                 ,nameof(hipSubmissionFileSaved));
+                                                                                                                                                         
+  public static readonly mcsEventType hipSubmissionFileFormJoinSaved             = new(251, "HIP Submission File Form Join Saved"                       ,nameof(hipSubmissionFileFormJoinSaved));
+  public static readonly mcsEventType hipSubmissionErrorSaved                    = new(252, "HIP Submission Error Saved"                                ,nameof(hipSubmissionErrorSaved));
+  public static readonly mcsEventType finishFormConfigSaved                      = new(253, "Finish Form Config Saved"                                  ,nameof(finishFormConfigSaved));
+  public static readonly mcsEventType finishFormConfigSignatureSaved             = new(254, "Finish Form Config Signature Saved"                        ,nameof(finishFormConfigSignatureSaved));
+  public static readonly mcsEventType tracsPhaSetupSaved                         = new(255, "TRACS PHA Setup Saved"                                     ,nameof(tracsPhaSetupSaved));
+                                                                                                                                                         
+  public static readonly mcsEventType insInspectionSaved                         = new(256, "Inspection Standard Inspection Saved"                      ,nameof(insInspectionSaved));
+  public static readonly mcsEventType insQuestionSaved                           = new(257, "Inspection Standard Question Setup Saved"                  ,nameof(insQuestionSaved));
+  public static readonly mcsEventType insRoomSaved                               = new(258, "Inspection Standard Room Setup Saved"                      ,nameof(insRoomSaved));
+  public static readonly mcsEventType insInspectionDeficiencyWorkOrderSaved      = new(259, "Inspection Standard Deficiency Work Order Saved"           ,nameof(insInspectionDeficiencyWorkOrderSaved));
+  public static readonly mcsEventType insInspectionMitigationSaved               = new(260, "Inspection Standard Mitigation Saved"                      ,nameof(insInspectionMitigationSaved));
+                                                                                                                                                         
+  public static readonly mcsEventType stMaMassCreateBatchSaved                   = new(261, "General Cert Mass Create Batch Saved"                      ,nameof(stMaMassCreateBatchSaved));
+  public static readonly mcsEventType insFamilyNotificationSetupSaved            = new(262, "NSPIRE Family Notification Template Saved"                 ,nameof(insFamilyNotificationSetupSaved));
+  public static readonly mcsEventType glPhaSetupSaved                            = new(263, "General Ledger PHA Setup Saved"                            ,nameof(glPhaSetupSaved));
+  public static readonly mcsEventType phaPortalOppBatchDetailSaved               = new(264, "Deposit Batch Detail Saved"                                ,nameof(phaPortalOppBatchDetailSaved));
+  public static readonly mcsEventType depositProcessed                           = new(265, "Deposit Processed"                                         ,nameof(depositProcessed));
+                                                                                                                                                         
+  public static readonly mcsEventType phaPortalOppBatchCompletionToggle          = new(266, "Deposit Batch Completed Toggle"                            ,nameof(phaPortalOppBatchCompletionToggle));
+  public static readonly mcsEventType insInspectionDownloaded                    = new(267, "Inspection Standard Inspection Downloaded"                 ,nameof(insInspectionDownloaded));
+  public static readonly mcsEventType insTemplateTypeProgramSaved                = new(268, "Inspection Standard Template Type Program Saved"           ,nameof(insTemplateTypeProgramSaved));
+  public static readonly mcsEventType familyCertProjectContractSaved             = new(269, "Family Cert Project Contract Saved"                        ,nameof(familyCertProjectContractSaved));
+  public static readonly mcsEventType insPhaSetupSaved                           = new(270, "NSPIRE PHA Setup Saved"                                    ,nameof(insPhaSetupSaved));
+                                                                                                                                                         
+  public static readonly mcsEventType phArSetupReceiptCashAccountSaved           = new(271, "T AR Setup Receipt Cash Account Saved"                     ,nameof(phArSetupReceiptCashAccountSaved));
+  public static readonly mcsEventType phArSetupReceiptCashAccountProjectSaved    = new(272, "T AR Setup Receipt Cash Account Project Saved"             ,nameof(phArSetupReceiptCashAccountProjectSaved));
+  public static readonly mcsEventType vendorContractorHoursSaved                 = new(273, "Vendor Contractor Hours Saved"                             ,nameof(vendorContractorHoursSaved));
+  public static readonly mcsEventType finAssetDepTemplateSaved                   = new(274, "Asset Depreciation Template Saved"                         ,nameof(finAssetDepTemplateSaved));
+  public static readonly mcsEventType finAssetDepTemplateDetailSaved             = new(275, "Asset Depreciation Template Detail Saved"                  ,nameof(finAssetDepTemplateDetailSaved));
+                                                                                                                                                         
+  public static readonly mcsEventType finAssetDepDistributionDetailSaved         = new(276, "Asset Depreciation Distribution Detail Saved"              ,nameof(finAssetDepDistributionDetailSaved));
+  public static readonly mcsEventType phDirectDebitGroupSaved                    = new(277, "PH Direct Debit Group Saved"                               ,nameof(phDirectDebitGroupSaved));
+  public static readonly mcsEventType phaPortalMcConversationSeen                = new(278, "Portal Conversation Seen"                                  ,nameof(phaPortalMcConversationSeen));
+  public static readonly mcsEventType wlStatusUpdateBatchSaved                   = new(279, "Waiting List Status Update Batch Saved"                    ,nameof(wlStatusUpdateBatchSaved));
+  public static readonly mcsEventType wlStatusUpdateCriteriaSaved                = new(280, "Waiting List Status Update Criteria Saved"                 ,nameof(wlStatusUpdateCriteriaSaved));
+                                                                                                                                                         
+  public static readonly mcsEventType wlStatusUpdateRequestSaved                 = new(281, "Waiting List Status Update Request Saved"                  ,nameof(wlStatusUpdateRequestSaved));
+  public static readonly mcsEventType stMaVoucherExtensionSaved                  = new(282, "General Cert Voucher Extension Saved"                      ,nameof(stMaVoucherExtensionSaved));
+  public static readonly mcsEventType stMaPhaSetupSaved                          = new(283, "General Cert PHA Setup Saved"                              ,nameof(stMaPhaSetupSaved));
+  public static readonly mcsEventType aiUnitDesignationSaved                     = new(284, "AI Unit Designation Saved"                                 ,nameof(aiUnitDesignationSaved));
+  public static readonly mcsEventType aiSetAsideGroupSaved                       = new(285, "AI Set Aside Group Saved"                                  ,nameof(aiSetAsideGroupSaved));
+                                                                                                                                                         
+  public static readonly mcsEventType aiApplicableFractionGroupSaved             = new(286, "AI Applicable Fraction Group Saved"                        ,nameof(aiApplicableFractionGroupSaved));
+//  public static readonly mcsEventType phaWebsiteSetupSaved                       = new(287, "PHA Website Setup Saved"                                   ,nameof(phaWebsiteSetupSaved)); // NOT FOUND in the 'eventTypeDescription's Select Case statement
+  public static readonly mcsEventType adminPhaSetupSaved                         = new(288, "Admin Pha Setup Group Saved"                               ,nameof(adminPhaSetupSaved));
+  public static readonly mcsEventType meterReadingUnitTypeSaved                  = new(289, "Meter Reading Unit Type Saved"                             ,nameof(meterReadingUnitTypeSaved));
+  public static readonly mcsEventType meterReadingUtilityEffectiveSaved          = new(290, "Meter Reading Utility Effective Saved"                     ,nameof(meterReadingUtilityEffectiveSaved));
+                                                                                                                                                         
+  public static readonly mcsEventType meterReadingUtilityTypeSaved               = new(291, "Meter Reading Utility Type Saved"                          ,nameof(meterReadingUtilityTypeSaved));
+  public static readonly mcsEventType saPHASetupSaved                            = new(292, "Super Admin PHA Setup Saved"                               ,nameof(saPHASetupSaved));
+  public static readonly mcsEventType wlStatusReasonSaved                        = new(293, "Waiting List Status Reason Saved"                          ,nameof(wlStatusReasonSaved));
+  public static readonly mcsEventType fmContactSaved                             = new(294, "Family Contact Saved"                                      ,nameof(fmContactSaved));
+  public static readonly mcsEventType fmVehicleSaved                             = new(295, "Family Vehicle Saved"                                      ,nameof(fmVehicleSaved));
+                                                                                                                                                         
+  public static readonly mcsEventType fmPetSaved                                 = new(296, "Family Pet Saved"                                          ,nameof(fmPetSaved));
+  public static readonly mcsEventType lockboxByProgramSaved                      = new(297, "Lockbox By Program Saved"                                  ,nameof(lockboxByProgramSaved));
+//  public static readonly mcsEventType glAccountLabelSaved                        = new(298, "Financial Account Label Saved"                             ,nameof(glAccountLabelSaved)); // COMMENTED OUT in 'enum'
+  public static readonly mcsEventType smInfoMessageSaved                         = new(299, "Support Info Message Saved"                                ,nameof(smInfoMessageSaved));
+  public static readonly mcsEventType certALApplicationListSaved                 = new(300, "Application List Saved"                                    ,nameof(certALApplicationListSaved));
+                                                                                                                                                         
+  public static readonly mcsEventType certALCredentialSaved                      = new(301, "Application List Credential Saved"                         ,nameof(certALCredentialSaved));
+  public static readonly mcsEventType certALApplicationSaved                     = new(302, "Application List Application Saved"                        ,nameof(certALApplicationSaved));
+  public static readonly mcsEventType glStatementSaved                           = new(303, "General Ledger Statement Saved"                            ,nameof(glStatementSaved));
+  public static readonly mcsEventType glStatementGroupNodeSaved                  = new(304, "General Ledger Statement Group Node Saved"                 ,nameof(glStatementGroupNodeSaved));
+  public static readonly mcsEventType glStatementColumnNodeSaved                 = new(305, "General Ledger Statement Column Node Saved"                ,nameof(glStatementColumnNodeSaved));
+                                                                                                                                                         
+  public static readonly mcsEventType certALStatusSaved                          = new(306, "Application List Status Saved"                             ,nameof(certALStatusSaved));
+  public static readonly mcsEventType certALApplicationListStatusSaved           = new(307, "Application List Status Connection Saved"                  ,nameof(certALApplicationListStatusSaved));
+  public static readonly mcsEventType glStatementPacketSaved                     = new(308, "General Ledger Statement Packet Saved"                     ,nameof(glStatementPacketSaved));
+  public static readonly mcsEventType poInvoiceLineItemRelationSaved             = new(309, "Purchase Order Line Item Relation Saved"                   ,nameof(poInvoiceLineItemRelationSaved));
+  public static readonly mcsEventType poLineItemReleaseSaved                     = new(310, "Purchase Order Line Item Release Saved"                    ,nameof(poLineItemReleaseSaved));
+                                                                                                                                                         
+  public static readonly mcsEventType phPhaSetupSaved                            = new(311, "Tenant Accounting Pha Setup Saved"                         ,nameof(phPhaSetupSaved));
+  public static readonly mcsEventType hapMiscChargesSaved                        = new(312, "HAP Misc. Charges Saved"                                   ,nameof(hapMiscChargesSaved));
+  public static readonly mcsEventType programFinMiscChargesSaved                 = new(313, "Program Misc Charges Connection Saved"                     ,nameof(programFinMiscChargesSaved));
+  public static readonly mcsEventType phaUserGroupSaved                          = new(314, "PHA User Group Saved"                                      ,nameof(phaUserGroupSaved));
+  public static readonly mcsEventType phaUserGroupLinkSaved                      = new(315, "PHA User Group Link Saved"                                 ,nameof(phaUserGroupLinkSaved));
+                                                                                                                                                         
+  public static readonly mcsEventType ddDataDownloadSaved                        = new(316, "Data Download Saved"                                       ,nameof(ddDataDownloadSaved));
+  public static readonly mcsEventType tracsSpecialClaimSaved                     = new(317, "TRACS Special Claim Saved"                                 ,nameof(tracsSpecialClaimSaved));
+  public static readonly mcsEventType tracsSpecialClaimUnpaidRentDamagesSaved    = new(318, "TRACS Special Claim Unpaid Rent/Damages Saved"             ,nameof(tracsSpecialClaimUnpaidRentDamagesSaved));
+  public static readonly mcsEventType tracsSpecialClaimVacancyDuringRentUpSaved  = new(319, "TRACS Special Claim Vacancy During Rent-Up Saved"          ,nameof(tracsSpecialClaimVacancyDuringRentUpSaved));
+  public static readonly mcsEventType tracsSpecialClaimRegularVacancySaved       = new(320, "TRACS Special Claim Regular Vacancy Saved"                 ,nameof(tracsSpecialClaimRegularVacancySaved));
+                                                                                                                                                         
+  public static readonly mcsEventType tracsSpecialClaimDebtServiceSaved          = new(321, "TRACS Special Claim Debt Service Saved"                    ,nameof(tracsSpecialClaimDebtServiceSaved));
+  public static readonly mcsEventType finDepartmentSaved                         = new(322, "Department Saved"                                          ,nameof(finDepartmentSaved));
+  public static readonly mcsEventType expirableFileSaved                         = new(323, "Expirable File Saved"                                      ,nameof(expirableFileSaved));
+  public static readonly mcsEventType smTicketTagSaved                           = new(324, "Support Manager Ticket Tag Saved"                          ,nameof(smTicketTagSaved));
+  
+  #endregion
+  
+  #region 'explicit/implicit' operators ...
+  
+  //NOTE: I'm not sure if I want to do these or not.  I'm trying to figure a way to
+  //      build as much 'enum' support for this 'smart-enum' ...
+  // int -> EventType (explicit cast only - forces developer to think about it)
+  [Obsolete("Prefer EventType.GetById(int) for clarity and future-proofing.", false)]
+  public static explicit operator mcsEventType(int id)
+    => GetByID(id);
+    
+  // EventType -> int (implicit or explicit)
+  [Obsolete("Prefer EventType.EventTypeName.ID for clarity and future-proofing.", false)]
+  public static implicit operator int(mcsEventType type)
+    => type is null ? throw new ArgumentNullException(nameof(type)) : type.ID;
+  
+  [Obsolete("Prefer EventType.event_type.Description for clarity and future-proofing.", false)]
+  public static implicit operator string(mcsEventType type)
+    => type is null ? throw new ArgumentNullException(nameof(type)) : type.Description;
+  
+  #endregion
+  
+  #region enum-like equality: compare based on ID only (ignore Description for uniqueness)
+
+  public override bool Equals(object obj)
+    => obj is mcsEventType type && Equals(type);
+
+  public bool Equals(mcsEventType other)
+    => other is not null && ID == other.ID;
+
+  public override int GetHashCode()
+    => ID.GetHashCode();
+
+  public static bool operator == (mcsEventType left, mcsEventType right)
+    => left.Equals(right);
+  
+  public static bool operator != (mcsEventType left, mcsEventType right)
+    => !left.Equals(right);
+
+  #endregion
+}
+
 
 #region (Option 1: sealed class ...)
 /*************************************************************************************************/
@@ -70,7 +631,7 @@ public sealed class EventType
 
   #region Specific EventType Declarations ...
   
-  public static readonly EventType InspectionSaved                             = new(  1, "Inspection Saved");
+  public static readonly EventType InspectionSaved                             = new(  1, "Inspection Saved");  
   public static readonly EventType InsertFamily                                = new(  2, "Family Inserted");
   public static readonly EventType VacatedTenantSaved                          = new(  3, "Vacated Tenant Saved");
   public static readonly EventType PmPhaSaved                                  = new(  4, "Agency Saved");
@@ -478,8 +1039,21 @@ public sealed class EventType
                      .Select(f => (EventType)f.GetValue(null)!)
                      .ToDictionary(e => e.ID);
    
-  public static EventType GetFieldByID(int id) 
+  public static EventType GetFieldByID(int id)
     => _fields.TryGetValue(id, out var value) ? value : throw new ArgumentOutOfRangeException($"Unknown event type id: {id}");
+
+#region Field Descriptions
+//
+//  private static readonly IReadOnlyDictionary<string, EventType> _field_descriptions =
+//    typeof(EventType).GetFields(BindingFlags.Public | BindingFlags.Static)
+//                     .Where(f  => f.FieldType == typeof(EventType))
+//                     .Select(f => (EventType)f.GetValue(null)!)
+//                     .ToDictionary(e => e.Description);
+//
+//  public static object GetAllFieldDescriptions()
+//    => _field_descriptions.Values.ToList().AsReadOnly();
+//
+#endregion
    
   //public static IReadOnlyList<EventType> GetAllFields()
   //  => _fields.Values.ToList().AsReadOnly();
@@ -514,6 +1088,7 @@ public sealed class EventType
     => !asJsonObject ? $"ID: {ID}, Description: {Description}"
                      : $"{{ID: {ID}, Description: {Description}}}";
 
+  // Property(s) ---------------------------------------------------------------------------------------------------------------
   private static readonly Lazy<IReadOnlyDictionary<int, EventType>> _properties = new(() => 
     typeof(EventType).GetProperties(BindingFlags.Public | BindingFlags.Static)
                      .Where(p  => p.PropertyType == typeof(EventType))
