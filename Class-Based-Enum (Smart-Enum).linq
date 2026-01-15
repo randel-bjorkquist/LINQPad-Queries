@@ -93,6 +93,10 @@ public abstract class mcsSmartEnumBase<TSelf, Tid> : IFormattable
     Code        = code        ?? throw new ArgumentNullException(nameof(code));
   }
   
+  private static readonly JsonSerializerOptions _jsonOptions 
+    = new() { PropertyNameCaseInsensitive = true,
+              WriteIndented = true };
+  
   private static IReadOnlyDictionary<Tid, TSelf> _AllFieldInstances
     => typeof(TSelf).GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly)
                     .Where(f => f.FieldType == typeof(TSelf))
@@ -146,8 +150,10 @@ public abstract class mcsSmartEnumBase<TSelf, Tid> : IFormattable
       null or "" or "D" => Description,                                           // Default: Description
                     "C" => Code,                                                  // Code (field name)
                     "I" => ID?.ToString() ?? string.Empty,                        // ID as string
+                    
                     "F" => $"{Code} ({ID}): {Description}",                       // Full verbose format
                     "G" => $"{Code} ({ID})",                                      // General / short + id
+                    
                     "f" => $"ID: {ID}, Description: {Description}, Code: {Code}", // Full verbose format
                     "g" => $"ID: {ID}, Code: {Code}",                             // General / short + id
                      _  => Description                                            // fallbase
@@ -168,8 +174,8 @@ public abstract class mcsSmartEnumBase<TSelf, Tid> : IFormattable
   /// <summary>
   /// Returns a JSON string representation. This is a convenience wrapper over AsJsonObject().
   /// </summary>
-  public string AsJsonString(JsonSerializerOptions? options = null)
-    => JsonSerializer.Serialize(AsJsonObject(), options);
+  public string AsJsonString(JsonSerializerOptions options = null)
+    => JsonSerializer.Serialize(AsJsonObject(), options ?? _jsonOptions);
   
   #region enum-like equality: compare based on ID only (ignore Description for uniqueness)
   
@@ -1177,9 +1183,6 @@ public sealed class mcsEventType : mcsSmartEnumInt<mcsEventType>
   /****************************************************************************************************************************************************************************************************/
   #endregion
 }
-
-
-
 
 
 #region (Option 1: sealed class ...)
