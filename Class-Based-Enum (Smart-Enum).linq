@@ -74,19 +74,40 @@ void Main()
   mcsEventType.VacatedTenantSaved.AsJsonObject().Dump("mcsEventType.VacatedTenantSaved.AsJsonObject()");
 }
 
-#region abstract mcsSmartEnums / mcsSmartEnumBase
+#region abstract mcsSmartEnum(s) && interface(s) ImcsSmartEnum
+
+public interface ImcsSmartEnum<TSelf, Tid>
+  where TSelf : ImcsSmartEnum<TSelf, Tid>
+  where Tid   : notnull, IEquatable<Tid>, IComparable<Tid>
+{
+  Tid ID               { get; }
+  string Description   { get; }
+  string Code          { get; }
+  
+  static abstract IReadOnlyList<TSelf> GetAll();
+  static abstract TSelf GetByID(Tid id);
+  
+  // Instance methods (these can be abstract in interface)
+  string ToString(string? format, IFormatProvider? provider = null);  
+  object AsJsonObject();
+  string AsJsonString(JsonSerializerOptions options = null);
+  
+  // Equality & comparison (instance methods)
+  bool Equals(TSelf? other);
+}
 
 // base ---------------------------------------------------------------------------------
 // Base class – clean, no reflection, no static fields except constants
-public abstract class mcsSmartEnumBase<TSelf, Tid> : IFormattable
-  where TSelf : mcsSmartEnumBase<TSelf, Tid>
+//public abstract class mcsSmartEnumBase<TSelf, Tid> : IFormattable
+public abstract class mcsSmartEnum<TSelf, Tid> : IFormattable, ImcsSmartEnum<TSelf, Tid>
+  where TSelf : mcsSmartEnum<TSelf, Tid>
   where Tid   : notnull, IEquatable<Tid>, IComparable<Tid>
 {
   public Tid ID             { get; }
   public string Description { get; }
   public string Code        { get; private set; } = "Unknown";
   
-  protected mcsSmartEnumBase(Tid id, string description, string code)
+  protected mcsSmartEnum(Tid id, string description, string code)
   {
     ID          = id          ?? throw new ArgumentNullException(nameof(id));
     Description = description ?? throw new ArgumentNullException(nameof(description));
@@ -188,22 +209,22 @@ public abstract class mcsSmartEnumBase<TSelf, Tid> : IFormattable
   public override int GetHashCode()
     => EqualityComparer<Tid>.Default.GetHashCode(ID);
   
-  public static bool operator == (mcsSmartEnumBase<TSelf, Tid> left, mcsSmartEnumBase<TSelf, Tid> right)
+  public static bool operator == (mcsSmartEnum<TSelf, Tid> left, mcsSmartEnum<TSelf, Tid> right)
     => ReferenceEquals(left, right) || (left is not null && right is not null && left.Equals((TSelf)right));
   
-  public static bool operator != (mcsSmartEnumBase<TSelf, Tid> left, mcsSmartEnumBase<TSelf, Tid> right)
+  public static bool operator != (mcsSmartEnum<TSelf, Tid> left, mcsSmartEnum<TSelf, Tid> right)
     => !(left == right);
   
-  public static bool operator < (mcsSmartEnumBase<TSelf, Tid> left, mcsSmartEnumBase<TSelf, Tid> right)
+  public static bool operator < (mcsSmartEnum<TSelf, Tid> left, mcsSmartEnum<TSelf, Tid> right)
     => left.ID.CompareTo(right.ID) < 0;
     
-  public static bool operator > (mcsSmartEnumBase<TSelf, Tid> left, mcsSmartEnumBase<TSelf, Tid> right)
+  public static bool operator > (mcsSmartEnum<TSelf, Tid> left, mcsSmartEnum<TSelf, Tid> right)
     => left.ID.CompareTo(right.ID) > 0;
     
-  public static bool operator <= (mcsSmartEnumBase<TSelf, Tid> left, mcsSmartEnumBase<TSelf, Tid> right)
+  public static bool operator <= (mcsSmartEnum<TSelf, Tid> left, mcsSmartEnum<TSelf, Tid> right)
     => left.ID.CompareTo(right.ID) <= 0;
   
-  public static bool operator >= (mcsSmartEnumBase<TSelf, Tid> left, mcsSmartEnumBase<TSelf, Tid> right)
+  public static bool operator >= (mcsSmartEnum<TSelf, Tid> left, mcsSmartEnum<TSelf, Tid> right)
     => left.ID.CompareTo(right.ID) >= 0;
 
   #endregion
@@ -217,7 +238,7 @@ public abstract class mcsSmartEnumShort<Tself> : mcsSmartEnumInt16<Tself>
     : base(id, description, code) { }
 }
 
-public abstract class mcsSmartEnumInt16<Tself> : mcsSmartEnumBase<Tself, Int16>
+public abstract class mcsSmartEnumInt16<Tself> : mcsSmartEnum<Tself, Int16>
   where Tself : mcsSmartEnumInt16<Tself>
 {
   protected mcsSmartEnumInt16(Int16 id, string description, string code) 
@@ -250,7 +271,7 @@ public abstract class mcsSmartEnumInt<Tself> : mcsSmartEnumInt32<Tself>
     : base(id, description, code) { }
 }
 
-public abstract class mcsSmartEnumInt32<Tself> : mcsSmartEnumBase<Tself, Int32>
+public abstract class mcsSmartEnumInt32<Tself> : mcsSmartEnum<Tself, Int32>
   where Tself : mcsSmartEnumInt32<Tself>
 {
   protected mcsSmartEnumInt32(Int32 id, string description, string code)
@@ -283,7 +304,7 @@ public abstract class mcsSmartEnumLong<Tself> : mcsSmartEnumInt64<Tself>
     : base(id, description, code) { }
 }
 
-public abstract class mcsSmartEnumInt64<Tself> : mcsSmartEnumBase<Tself, Int64>
+public abstract class mcsSmartEnumInt64<Tself> : mcsSmartEnum<Tself, Int64>
   where Tself : mcsSmartEnumInt64<Tself>
 {
   protected mcsSmartEnumInt64(Int64 id, string description, string code)
@@ -309,7 +330,7 @@ public abstract class mcsSmartEnumInt64<Tself> : mcsSmartEnumBase<Tself, Int64>
 }
 
 // int128 -------------------------------------------------------------------------------
-public abstract class mcsSmartEnumInt128<Tself> : mcsSmartEnumBase<Tself, Int128>
+public abstract class mcsSmartEnumInt128<Tself> : mcsSmartEnum<Tself, Int128>
   where Tself : mcsSmartEnumInt128<Tself>
 {
   protected mcsSmartEnumInt128(Int128 id, string description, string code)
@@ -335,7 +356,7 @@ public abstract class mcsSmartEnumInt128<Tself> : mcsSmartEnumBase<Tself, Int128
 }
 
 // guid ---------------------------------------------------------------------------------
-public abstract class mcsSmartEnumGuid<Tself> : mcsSmartEnumBase<Tself, Guid>
+public abstract class mcsSmartEnumGuid<Tself> : mcsSmartEnum<Tself, Guid>
   where Tself : mcsSmartEnumGuid<Tself>
 {
   protected mcsSmartEnumGuid(Guid id, string description, string code)
@@ -361,7 +382,7 @@ public abstract class mcsSmartEnumGuid<Tself> : mcsSmartEnumBase<Tself, Guid>
 }
 
 // string -------------------------------------------------------------------------------
-public abstract class mcsSmartEnumString<Tself> : mcsSmartEnumBase<Tself, string>
+public abstract class mcsSmartEnumString<Tself> : mcsSmartEnum<Tself, string>
   where Tself : mcsSmartEnumString<Tself>
 {
   protected mcsSmartEnumString(string id, string description, string code)
