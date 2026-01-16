@@ -108,7 +108,7 @@ public abstract class TypedEnum<TSelf, Tid> : IFormattable, ITypedEnum<TSelf, Ti
   public string Code        { get; }
   public bool IsActive      { get; }
   
-  protected TypedEnum(Tid id, string description, string code, bool active = true)
+  protected TypedEnum(Tid id, string description, string code, bool active)
   {
     ID          = id          ?? throw new ArgumentNullException(nameof(id));
     Description = description ?? throw new ArgumentNullException(nameof(description));
@@ -116,9 +116,9 @@ public abstract class TypedEnum<TSelf, Tid> : IFormattable, ITypedEnum<TSelf, Ti
     IsActive    = active;
   }
   
-  private static readonly JsonSerializerOptions _jsonOptions 
-    = new() { PropertyNameCaseInsensitive = true,
-              WriteIndented = true };
+  //private static readonly JsonSerializerOptions _jsonOptions 
+  //  = new() { PropertyNameCaseInsensitive = true,
+  //            WriteIndented = true };
 
   private static readonly Lazy<IReadOnlyDictionary<Tid, TSelf>> _instances 
     = new(() => {
@@ -261,15 +261,15 @@ public abstract class TypedEnum<TSelf, Tid> : IFormattable, ITypedEnum<TSelf, Ti
 public abstract class TypedEnumShort<Tself> : TypedEnumInt16<Tself>
   where Tself : TypedEnumShort<Tself>
 {
-  protected TypedEnumShort(short id, string description, string code) 
-    : base(id, description, code) { }
+  protected TypedEnumShort(short id, string description, string code, bool active = true)
+    : base(id, description, code, active) { }
 }
 
 public abstract class TypedEnumInt16<Tself> : TypedEnum<Tself, Int16>
   where Tself : TypedEnumInt16<Tself>
 {
-  protected TypedEnumInt16(Int16 id, string description, string code) 
-    : base(id, description, code) { }
+  protected TypedEnumInt16(Int16 id, string description, string code, bool active = true)
+    : base(id, description, code, active) { }
   
   #region 'explicit/implicit' operators ...
   
@@ -294,15 +294,15 @@ public abstract class TypedEnumInt16<Tself> : TypedEnum<Tself, Int16>
 public abstract class TypedEnumInt<Tself> : TypedEnumInt32<Tself>
   where Tself : TypedEnumInt<Tself>
 {
-  protected TypedEnumInt(int id, string description, string code)
-    : base(id, description, code) { }
+  protected TypedEnumInt(int id, string description, string code, bool active = true)
+    : base(id, description, code, active) { }
 }
 
 public abstract class TypedEnumInt32<Tself> : TypedEnum<Tself, Int32>
   where Tself : TypedEnumInt32<Tself>
 {
-  protected TypedEnumInt32(Int32 id, string description, string code)
-    : base(id, description, code) { }
+  protected TypedEnumInt32(Int32 id, string description, string code, bool active = true)
+    : base(id, description, code, active) { }
     
   #region 'explicit/implicit' operators ...
   
@@ -327,15 +327,15 @@ public abstract class TypedEnumInt32<Tself> : TypedEnum<Tself, Int32>
 public abstract class TypedEnumLong<Tself> : TypedEnumInt64<Tself>
   where Tself : TypedEnumLong<Tself>
 {
-  protected TypedEnumLong(long id, string description, string code)
-    : base(id, description, code) { }
+  protected TypedEnumLong(long id, string description, string code, bool active = true)
+    : base(id, description, code, active) { }
 }
 
 public abstract class TypedEnumInt64<Tself> : TypedEnum<Tself, Int64>
   where Tself : TypedEnumInt64<Tself>
 {
-  protected TypedEnumInt64(Int64 id, string description, string code)
-    : base(id, description, code) { }
+  protected TypedEnumInt64(Int64 id, string description, string code, bool active = true)
+    : base(id, description, code, active) { }
   
   #region 'explicit/implicit' operators ...
   
@@ -360,8 +360,8 @@ public abstract class TypedEnumInt64<Tself> : TypedEnum<Tself, Int64>
 public abstract class TypedEnumInt128<Tself> : TypedEnum<Tself, Int128>
   where Tself : TypedEnumInt128<Tself>
 {
-  protected TypedEnumInt128(Int128 id, string description, string code)
-    : base(id, description, code) { }
+  protected TypedEnumInt128(Int128 id, string description, string code, bool active = true)
+    : base(id, description, code, active) { }
   
   #region 'explicit/implicit' operators ...
   
@@ -386,8 +386,8 @@ public abstract class TypedEnumInt128<Tself> : TypedEnum<Tself, Int128>
 public abstract class TypedEnumGuid<Tself> : TypedEnum<Tself, Guid>
   where Tself : TypedEnumGuid<Tself>
 {
-  protected TypedEnumGuid(Guid id, string description, string code)
-    : base(id, description, code) { }
+  protected TypedEnumGuid(Guid id, string description, string code, bool active = true)
+    : base(id, description, code, active) { }
   
   #region 'explicit/implicit' operators ...
   
@@ -412,8 +412,8 @@ public abstract class TypedEnumGuid<Tself> : TypedEnum<Tself, Guid>
 public abstract class TypedEnumString<Tself> : TypedEnum<Tself, string>
   where Tself : TypedEnumString<Tself>
 {
-  protected TypedEnumString(string id, string description, string code)
-    : base(id, description, code) { }
+  protected TypedEnumString(string id, string description, string code, bool active = true)
+    : base(id, description, code, active) { }
   
   #region 'explicit/implicit' operators ...
   
