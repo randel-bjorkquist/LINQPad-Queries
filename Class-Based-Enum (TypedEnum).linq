@@ -116,18 +116,38 @@ public abstract class TypedEnum<TSelf, Tid> : IFormattable, ITypedEnum<TSelf, Ti
     = new() { PropertyNameCaseInsensitive = true,
               WriteIndented = true };
 
-  private static readonly Lazy<IReadOnlyDictionary<Tid, TSelf>> _instances = new(() => {
-    return typeof(TSelf).GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly)
-                        .Where(f => f.FieldType == typeof(TSelf))
-                        .Select(f => (TSelf)f.GetValue(null)!)
-                        .OrderBy(f => f.ID)
-                        .ToDictionary(f => f.ID);
+  //private static readonly Lazy<IReadOnlyDictionary<Tid, TSelf>> _instances = new(() => {
+  //  return typeof(TSelf).GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly)
+  //                      .Where(f => f.FieldType == typeof(TSelf))
+  //                      .Select(f => (TSelf)f.GetValue(null)!)
+  //                      .OrderBy(f => f.ID)
+  //                      .ToDictionary(f => f.ID);
+  //});
+
+  private static readonly Lazy<IReadOnlyDictionary<Tid, TSelf>> _instances 
+    = new(() => {
+    
+    var fields = typeof(TSelf).GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly)
+                              .Where(f => f.FieldType == typeof(TSelf))
+                              .Select(f => (TSelf)f.GetValue(null)!)
+                              .ToList<TSelf>();
+    
+    var duplicates = fields.GroupBy(f => f.ID)
+                           .Where(g => g.Count() > 1)
+                           .Select(g => g.Key)
+                           .ToList();
+
+    if (duplicates.Count > 0)
+      throw new InvalidOperationException($"Duplication IDs detected in {typeof(TSelf).Name}: {string.Join(", ", duplicates)}");
+                              
+    return fields.ToDictionary(f => f.ID);
   });
   
   private static IReadOnlyDictionary<Tid, TSelf> Fields => _instances.Value;
   
   public static IReadOnlyList<TSelf> GetAll()
     => Fields.Values
+             .OrderBy(f => f.ID)
              .ToList<TSelf>()
              .AsReadOnly();
   
