@@ -136,10 +136,13 @@ public abstract class TypedEnum<TSelf, Tid> : IFormattable, ITypedEnum<TSelf, Ti
                            .Where(g => g.Count() > 1)
                            .Select(g => g.Key)
                            .ToList();
-
-    if (duplicates.Count > 0)
-      throw new InvalidOperationException($"Duplication IDs detected in {typeof(TSelf).Name}: {string.Join(", ", duplicates)}");
-                              
+    
+    if (duplicates.Any())
+    {
+      var separator = $"{Environment.NewLine}  - ";
+      throw new InvalidOperationException($"Duplication IDs detected in {type.Name}: {separator}{string.Join(separator, duplicates)}");
+    }
+    
     return fields.ToDictionary(f => f.ID);
   });
   
@@ -1225,3 +1228,4 @@ public sealed class mcsEventType : TypedEnumInt<mcsEventType>
   /****************************************************************************************************************************************************************************************************/
   #endregion
 }
+
