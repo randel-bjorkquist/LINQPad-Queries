@@ -57,6 +57,7 @@ void Main()
   
   //-----------------------------------------------------------------------------------------------
   // ToString()s ....
+  mcsEventType.VacatedTenantSaved.ToString("A").Dump("mcsEventType.VacatedTenantSaved.ToString(\"A\") => A = 'IsActive'");
   mcsEventType.VacatedTenantSaved.ToString("D").Dump("mcsEventType.VacatedTenantSaved.ToString(\"D\") => D = 'Description'");
   mcsEventType.VacatedTenantSaved.ToString("C").Dump("mcsEventType.VacatedTenantSaved.ToString(\"C\") => C = 'Code (field name)'");
   mcsEventType.VacatedTenantSaved.ToString("I").Dump("mcsEventType.VacatedTenantSaved.ToString(\"I\") => I = 'ID as string'");
@@ -79,11 +80,12 @@ public interface ITypedEnum<TSelf, Tid>
   where TSelf : ITypedEnum<TSelf, Tid>
   where Tid   : notnull, IEquatable<Tid>, IComparable<Tid>
 {
-  Tid ID               { get; }
-  string Description   { get; }
-  string Code          { get; }
+  Tid ID              { get; }
+  string Description  { get; }
+  string Code         { get; }
+  bool   IsActive     { get; }
   
-  static abstract IReadOnlyList<TSelf> GetAll();
+  static abstract IReadOnlyList<TSelf> GetAll(bool includeActive);
   static abstract TSelf GetByID(Tid id);
   
   // Instance methods (these can be abstract in interface)
@@ -103,38 +105,32 @@ public abstract class TypedEnum<TSelf, Tid> : IFormattable, ITypedEnum<TSelf, Ti
 {
   public Tid ID             { get; }
   public string Description { get; }
-  public string Code        { get; private set; } = "Unknown";
+  public string Code        { get; }
+  public bool IsActive      { get; }
   
-  protected TypedEnum(Tid id, string description, string code)
+  protected TypedEnum(Tid id, string description, string code, bool active = true)
   {
     ID          = id          ?? throw new ArgumentNullException(nameof(id));
     Description = description ?? throw new ArgumentNullException(nameof(description));
     Code        = code        ?? throw new ArgumentNullException(nameof(code));
+    IsActive    = active;
   }
   
   private static readonly JsonSerializerOptions _jsonOptions 
     = new() { PropertyNameCaseInsensitive = true,
               WriteIndented = true };
 
-  //private static readonly Lazy<IReadOnlyDictionary<Tid, TSelf>> _instances = new(() => {
-  //  return typeof(TSelf).GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly)
-  //                      .Where(f => f.FieldType == typeof(TSelf))
-  //                      .Select(f => (TSelf)f.GetValue(null)!)
-  //                      .OrderBy(f => f.ID)
-  //                      .ToDictionary(f => f.ID);
-  //});
-
   private static readonly Lazy<IReadOnlyDictionary<Tid, TSelf>> _instances 
     = new(() => {
-    
-    var fields = typeof(TSelf).GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly)
-                              .Where(f => f.FieldType == typeof(TSelf))
-                              .Select(f => (TSelf)f.GetValue(null)!)
-                              .ToList<TSelf>();
+    var type   = typeof(TSelf);
+    var fields = type.GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly)
+                     .Where(f => f.FieldType == type)
+                     .Select(f => (TSelf)f.GetValue(null)!)
+                     .ToList();
     
     var duplicates = fields.GroupBy(f => f.ID)
                            .Where(g => g.Count() > 1)
-                           .Select(g => g.Key)
+                           .SelectMany(g => g)
                            .ToList();
     
     if (duplicates.Any())
@@ -145,14 +141,15 @@ public abstract class TypedEnum<TSelf, Tid> : IFormattable, ITypedEnum<TSelf, Ti
     
     return fields.ToDictionary(f => f.ID);
   });
-  
+
   private static IReadOnlyDictionary<Tid, TSelf> Fields => _instances.Value;
-  
-  public static IReadOnlyList<TSelf> GetAll()
-    => Fields.Values
-             .OrderBy(f => f.ID)
-             .ToList<TSelf>()
-             .AsReadOnly();
+
+  public static IReadOnlyList<TSelf> GetAll(bool includeInactive = false)
+    => (includeInactive ? Fields.Values.Where(v => v.IsActive)
+                        : Fields.Values)
+        .OrderBy(f => f.ID)
+        .ToList()
+        .AsReadOnly();
   
   public static TSelf GetByID(Tid id)
     => Fields.TryGetValue(id, out TSelf value) 
@@ -165,11 +162,16 @@ public abstract class TypedEnum<TSelf, Tid> : IFormattable, ITypedEnum<TSelf, Ti
   /// <param name="format">
   /// The format specifier to use:
   /// <list type="bullet">
-  ///   <item><c>"D"</c> or <c>null</c> → Description (default)</item>
+  ///   <item><c>"A"</c> or IsActive as a string (Active or Inactive)</item>
+  ///   <item><c>"D"</c> or <c>null</c> → Description</item>
   ///   <item><c>"C"</c> → Code (the field name)</item>
-  ///   <item><c>"I"</c> → Id/Key as string</item>
-  ///   <item><c>"F"</c> → Full verbose format: "Code (Id): Description"</item>
-  ///   <item><c>"G"</c> → General short format: "Code (Id)"</item>
+  ///   <item><c>"I"</c> → ID as string</item>
+  ///   <item><c>"F"</c> → Full verbose format: "ID, Description, Code, Active"</item>
+  ///   <item><c>"G"</c> → General short format: "ID, Code, Active"</item>
+  /// 
+  ///   <item><c>"f"</c> → alternate Full verbose format: "Code (ID, Active): Description"</item>
+  ///   <item><c>"g"</c> → alternate General short format: "Code (ID, Active)"</item>
+  /// 
   ///   <item>Any other value → falls back to Description</item>
   /// </list>
   /// </param>
@@ -183,7 +185,7 @@ public abstract class TypedEnum<TSelf, Tid> : IFormattable, ITypedEnum<TSelf, Ti
   /// </remarks>
   /// <example>
   /// <code>
-  /// var evt = mcsEventType.InspectionSaved;
+  /// var evt = EventType.InspectionSaved;
   /// Console.WriteLine(evt.ToString("F"));  // Output: "InspectionSaved (1): Inspection Saved"
   /// Console.WriteLine($"{evt:C}");         // Output: "InspectionSaved"
   /// </code>
@@ -192,35 +194,36 @@ public abstract class TypedEnum<TSelf, Tid> : IFormattable, ITypedEnum<TSelf, Ti
   {
     return format switch
     {
-      null or "" or "D" => Description,                                           // Default: Description
-                    "C" => Code,                                                  // Code (field name)
-                    "I" => ID?.ToString() ?? string.Empty,                        // ID as string
-                    
-                    "F" => $"{Code} ({ID}): {Description}",                       // Full verbose format
-                    "G" => $"{Code} ({ID})",                                      // General / short + id
-                    
-                    "f" => $"ID: {ID}, Description: {Description}, Code: {Code}", // Full verbose format
-                    "g" => $"ID: {ID}, Code: {Code}",                             // General / short + id
-                     _  => Description                                            // fallbase
+      "A" => IsActive ? "Active" : "Inactive",                                          // Active as string
+      "D" => Description,                                                               // Default: Description
+      "C" => Code,                                                                      // Code (field name)
+      "I" => ID?.ToString() ?? string.Empty,                                            // ID as string
+      
+      "F" => $"ID: {ID}, Description: {Description}, Code: {Code}, Active: {IsActive}", // Full verbose format
+      "G" => $"ID: {ID}, Code: {Code}, Active: {IsActive}",                             // General / short + id
+      
+      "f" => $"{Code} ({ID}, {(IsActive ? "Active" : "Inactive")}): {Description}",     // alternative Full verbose format
+      "g" => $"{Code} ({ID}, {(IsActive ? "Active" : "Iactive")})",                     // alternative General / short + id
+      
+      _ => Description                                                                  // fallbase
     };
   }
-  
+
   // Optional: override object.ToString() to default to Description (or your preferred format)
   public override string ToString()
-    => ToString(format: "F", provider: null);
+    => ToString(format: "g", provider: null);
 
   /// <summary>
   /// Returns a structured JSON-ready object. Safe for APIs, logs, and serialaztion.
   /// </summary>
   public virtual object AsJsonObject()
-    => new {id = ID, description = Description, code = Code};
+    => new {id = ID, description = Description, code = Code, active = IsActive};
   
   /// <summary>
   /// Returns a JSON string representation. This is a convenience wrapper over AsJsonObject().
   /// </summary>
   public string AsJsonString(JsonSerializerOptions options = null)
     => JsonSerializer.Serialize(AsJsonObject(), options);
-    //=> JsonSerializer.Serialize(AsJsonObject(), options ?? _jsonOptions);
   
   #region enum-like equality: compare based on ID only (ignore Description for uniqueness)
   
@@ -836,6 +839,10 @@ public sealed class mcsEventType : TypedEnumInt<mcsEventType>
   #region specific mcsEventType declarations w/nameof(field_name) ...
   /****************************************************************************************************************************************************************************************************/
   
+  //NOTE: dumplicated mcsEventTyps for testing only ...
+  //public static readonly mcsEventType DuplicateEventType1                        = new(  1, "Duplicate Event Type1"                                    ,nameof(DuplicateEventType1));
+  //public static readonly mcsEventType DuplicateEventType324                      = new(324, "Duplicate Event Type324"                                  ,nameof(DuplicateEventType324));
+  
   public static readonly mcsEventType InspectionSaved                            = new(  1, "Inspection Saved"                                          ,nameof(InspectionSaved));
   public static readonly mcsEventType InsertFamily                               = new(  2, "Family Inserted"                                           ,nameof(InsertFamily));
   public static readonly mcsEventType VacatedTenantSaved                         = new(  3, "Vacated Tenant Saved"                                      ,nameof(VacatedTenantSaved));
@@ -1228,4 +1235,3 @@ public sealed class mcsEventType : TypedEnumInt<mcsEventType>
   /****************************************************************************************************************************************************************************************************/
   #endregion
 }
-
