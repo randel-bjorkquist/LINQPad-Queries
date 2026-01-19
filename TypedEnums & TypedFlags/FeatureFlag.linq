@@ -467,6 +467,15 @@ public class FeatureFlagConfig
 public enum FlagValueSource { Default, Global, Tenant }
 public readonly record struct FlagResolution(string FeatureFlag, string? TenantCode, FlagValueSource Source, int Priority, bool Value);
 
+public sealed class HousingAuthority : TypedEnumInt<HousingAuthority>
+{
+  private HousingAuthority (int id, string description, string code)
+    : base(id, description, code) { }
+    
+  public static readonly HousingAuthority Demonstration = new(1190, "Demonstration (for demos and/or dev)", nameof(Demonstration));
+}
+
+
 #region COMMENTED OUT: original code (R&D code)
 /**************************************************************************************************
 
