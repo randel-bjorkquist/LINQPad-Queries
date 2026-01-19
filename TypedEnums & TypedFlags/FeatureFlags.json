@@ -1,0 +1,16 @@
+{
+  "global": {
+    "CustomReports": true,
+    "NewPaymentFlow": true,
+    "AdvancedReporting": true
+  },
+  "tenants": {
+    "TenantA": {
+      "NewPaymentFlow": false,
+      "AdvancedReporting": false
+    },
+    "TenantB": {
+      "NewPaymentFlow": false
+    }
+  }
+}
