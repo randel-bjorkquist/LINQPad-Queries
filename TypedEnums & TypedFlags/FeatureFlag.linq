@@ -20,38 +20,57 @@ void Main()
   //flag = FeatureFlag.CustomReports["TenantA"];
   
   if (FeatureFlag.CustomReports)
-    $"FeatureFlag.CustomReports is active.".Dump();
+    $"FeatureFlag.CustomReports is active."
+      .Dump("if (FeatureFlag.CustomReports)");
   else
-    $"FeatureFlag.CustomReports is 'not' active.".Dump();
+    $"FeatureFlag.CustomReports is 'not' active."
+      .Dump("if (FeatureFlag.CustomReports)");
   
   FeatureFlag.NewPaymentFlow.Dump("FeatureFlag.NewPaymentFlow");
+
+  if(FeatureFlag.NewPaymentFlow)
+    $"FeatureFlag.NewPaymentFlow is active."
+      .Dump("if (FeatureFlag.NewPaymentFlow)");
+  else
+    $"FeatureFlag.NewPaymentFlow is not active."
+      .Dump("if (FeatureFlag.NewPaymentFlow)");
+  
+  
   
   var tenant_code = "TenantA";
-  
+  tenant_code.Dump("var tenant_code = \"TenantA\";");
+
   if (FeatureFlag.NewPaymentFlow[tenant_code])
-    $"FeatureFlag.NewPaymentFlow for '{tenant_code}' is active.".Dump();
+    $"FeatureFlag.NewPaymentFlow for '{tenant_code}' is active."
+      .Dump($"if (FeatureFlag.NewPaymentFlow[{tenant_code}])");
   else
-    $"FeatureFlag.NewPaymentFlow for '{tenant_code}' is 'not' active.".Dump();
-
-
-
-  if (FeatureFlag.NewPaymentFlow)
-    $"FeatureFlag.NewPaymentFlow is active.".Dump();
-  else
-    $"FeatureFlag.NewPaymentFlow is not active.".Dump();
-
-
+    $"FeatureFlag.NewPaymentFlow for '{tenant_code}' is 'not' active."
+      .Dump($"if (FeatureFlag.NewPaymentFlow[{tenant_code}])");
+  
+  
+  
   var pha_id = 1190;  // pulled from state ...
-  var event_type   = HousingAuthority.GetByID(pha_id);
-  var code         = event_type.Code; 
+  var event_type = HousingAuthority.GetByID(pha_id);
+  var code = event_type.Code;
+
   var feature_flag = FeatureFlag.NewPaymentFlow[code];
- 
-  if (FeatureFlag.NewPaymentFlow[1190])
-  //if (FeatureFlag.NewPaymentFlow[HousingAuthority.GetByID(1190).Code])
-  //if (FeatureFlag.NewPaymentFlow[code])
-    $"FeatureFlag.NewPaymentFlow for '{event_type.ToString()}' is active.".Dump();
+  feature_flag.Dump($"var feature_flag = FeatureFlag.NewPaymentFlow[{code}];");
+
+  //if(FeatureFlag.NewPaymentFlow[HousingAuthority.GetByID(1190).Code])
+  if (FeatureFlag.NewPaymentFlow[code])
+    $"FeatureFlag.NewPaymentFlow for '{event_type.ToString()}' is active."
+      .Dump($"if (FeatureFlag.NewPaymentFlow[{code}])");
   else
-    $"FeatureFlag.NewPaymentFlow for '{event_type.ToString()}' is 'not' active.".Dump();
+    $"FeatureFlag.NewPaymentFlow for '{event_type.ToString()}' is 'not' active."
+      .Dump($"if (FeatureFlag.NewPaymentFlow[{code}])");
+  
+  
+  if (FeatureFlag.NewPaymentFlow[1190])
+    $"FeatureFlag.NewPaymentFlow for '{event_type.ToString()}' is active."
+      .Dump("if (FeatureFlag.NewPaymentFlow[1190])");
+  else
+    $"FeatureFlag.NewPaymentFlow for '{event_type.ToString()}' is 'not' active."
+      .Dump("if (FeatureFlag.NewPaymentFlow[1190])");
   
   
   var flags = FeatureFlag.GetAll();
@@ -225,7 +244,7 @@ public sealed class FeatureFlag : TypedEnumGuid<FeatureFlag>
       return IsActive;
   
     if(config.Tenants.TryGetValue(tenant_code, out var tenant_flags) &&
-       tenant_flags.TryGetValue(tenant_code, out bool is_active))
+       tenant_flags.TryGetValue(Code, out bool is_active))
     {
       return is_active;
     }
