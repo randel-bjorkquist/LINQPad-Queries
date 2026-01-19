@@ -5,50 +5,69 @@
 void Main()
 {
   #region COMMENTED OUT: R&D CODE ...
-  
+
   //var service = new FeatureFlagService("FeatureFlags.json");
   //service.IsActive("InspectionSaved").Dump();  // true  
-  
-  //FeatureFlag.Initialize();
-  
-  //var flag = FeatureFlag.CustomReports;
-  //flag.Dump("var flag = mcsFeatureFlag.CustomReports;", 0);
-  //
-  ////flag = FeatureFlag.CustomReports["TenantA"];
-  //
-  //if (!FeatureFlag.CustomReports)
-  //  $"FeatureFlag.CustomReports is 'not' active.".Dump();
-  //
-  //$"FeatureFlag.CustomReports is{(FeatureFlag.CustomReports ? " " : " 'not' ")}active.".Dump();
-  //
-  //FeatureFlag.NewPaymentFlow.Dump("FeatureFlag.NewPaymentFlow");
-  //
-  //var tenant_code = "TenantA";
-  //
-  //if (FeatureFlag.NewPaymentFlow[tenant_code])
-  //  $"FeatureFlag.NewPaymentFlow for '{tenant_code}' is active.".Dump();
-  //else
-  //  $"FeatureFlag.NewPaymentFlow for '{tenant_code}' is 'not' active.".Dump();
-  
-  
-  //var flags = FeatureFlag.GetAll();
-  //flags.Dump("var flags = mcsFeatureFlag.GetAll();", 0);
-  
-  
-  // 1. Make sure the JSON file exists in the same folder as your LINQPad query
-  //    (or adjust the path/filename below if needed)
-  
-  // Optional: Explicitly initialize (not really needed anymore thanks to lazy init)
-  // FeatureFlag.Initialize("featureflags.json");
 
-  FeatureFlag.CustomReports.Resovle("TenantA").Dump();
-  FeatureFlag.NewPaymentFlow.Resovle("TenantA").Dump();
-  FeatureFlag.AdvancedReporting.Resovle("TenantA").Dump();
+  //NOTE: Make sure the JSON file exists in the same folder as your 
+  //      LINQPad query (or adjust the path/filename below if needed) ...
+  //FeatureFlag.Initialize("featureflags.json");
+  //FeatureFlag.Initialize();
+
+  var flag = FeatureFlag.CustomReports;
+  flag.Dump("var flag = mcsFeatureFlag.CustomReports;", 0);
   
-  FeatureFlag.CustomReports.Resovle("TenantB").Dump();
-  FeatureFlag.NewPaymentFlow.Resovle("TenantB").Dump();
-  FeatureFlag.AdvancedReporting.Resovle("TenantB").Dump();
+  //flag = FeatureFlag.CustomReports["TenantA"];
   
+  if (FeatureFlag.CustomReports)
+    $"FeatureFlag.CustomReports is active.".Dump();
+  else
+    $"FeatureFlag.CustomReports is 'not' active.".Dump();
+  
+  FeatureFlag.NewPaymentFlow.Dump("FeatureFlag.NewPaymentFlow");
+  
+  var tenant_code = "TenantA";
+  
+  if (FeatureFlag.NewPaymentFlow[tenant_code])
+    $"FeatureFlag.NewPaymentFlow for '{tenant_code}' is active.".Dump();
+  else
+    $"FeatureFlag.NewPaymentFlow for '{tenant_code}' is 'not' active.".Dump();
+
+
+
+  if (FeatureFlag.NewPaymentFlow)
+    $"FeatureFlag.NewPaymentFlow is active.".Dump();
+  else
+    $"FeatureFlag.NewPaymentFlow is not active.".Dump();
+
+
+  var pha_id = 1190;  // pulled from state ...
+  var event_type   = HousingAuthority.GetByID(pha_id);
+  var code         = event_type.Code; 
+  var feature_flag = FeatureFlag.NewPaymentFlow[code];
+ 
+  if (FeatureFlag.NewPaymentFlow[1190])
+  //if (FeatureFlag.NewPaymentFlow[HousingAuthority.GetByID(1190).Code])
+  //if (FeatureFlag.NewPaymentFlow[code])
+    $"FeatureFlag.NewPaymentFlow for '{event_type.ToString()}' is active.".Dump();
+  else
+    $"FeatureFlag.NewPaymentFlow for '{event_type.ToString()}' is 'not' active.".Dump();
+  
+  
+  var flags = FeatureFlag.GetAll();
+  flags.Dump("var flags = mcsFeatureFlag.GetAll();", 0);  
+
+  FeatureFlag.CustomReports.Resolve("TenantA").Dump("FeatureFlag.CustomReports.Resovle('TenantA')", 0);
+  FeatureFlag.NewPaymentFlow.Resolve("TenantA").Dump("FeatureFlag.NewPaymentFlow.Resovle('TenantA')", 0);
+  FeatureFlag.AdvancedReporting.Resolve("TenantA").Dump("FeatureFlag.AdvancedReporting.Resovle('TenantA')", 0);
+  
+  FeatureFlag.CustomReports.Resolve("TenantB").Dump("FeatureFlag.CustomReports.Resovle('TenantB')", 0);
+  FeatureFlag.NewPaymentFlow.Resolve("TenantB").Dump("FeatureFlag.NewPaymentFlow.Resovle('TenantB')", 0);
+  FeatureFlag.AdvancedReporting.Resolve("TenantB").Dump("FeatureFlag.AdvancedReporting('TenantB')", 0);
+
+  FeatureFlag.CustomReports.Resolve(1190).Dump("FeatureFlag.CustomReports.Resovle(1190)", 0);
+  FeatureFlag.CustomReports.Resolve("Demonstration").Dump("FeatureFlag.CustomReports.Resovle('Demonstration')", 0);
+
   #endregion
   
   #region COMMENTED OUT: looping via while(true) ...
@@ -146,20 +165,41 @@ public sealed class FeatureFlag : TypedEnumGuid<FeatureFlag>
     get {
       if(string.IsNullOrEmpty(tenant_code?.Trim()))
         return IsActive;
-        
-      Initialize();
       
-      var config = _cached_config;
-      if (config is null)
+      return GetTenantValue(tenant_code);
+        
+      //Initialize();
+      //
+      //var config = _cached_config;
+      //if (config is null)
+      //  return IsActive;
+      //
+      //if(config.Tenants.TryGetValue(tenant_code, out var tenant_flags) &&
+      //   tenant_flags.TryGetValue(Code, out bool is_active))
+      //{
+      //  return is_active;
+      //}
+      //
+      //return IsActive;
+    }
+  }
+  
+  /// <summary>
+  /// Gets whether this feature flag is active for the specified tenant.
+  /// Uses tenant-specific override if present, otherwise falls back to global/default.
+  /// Use <c>null</c> or empty string for global/default value.
+  /// </summary>
+  /// <param name="tenant_id">The tenant ID or 0 (zero) for global.</param>
+  /// <returns>true if the flag is active for the tenant (or globally), false otherwise.</returns>  
+  public bool this[int tenant_id]
+  {
+    get {
+      if(tenant_id <= 0)
         return IsActive;
       
-      if(config.Tenants.TryGetValue(tenant_code, out var tenant_flags) &&
-         tenant_flags.TryGetValue(Code, out bool is_active))
-      {
-        return is_active;
-      }
+      string tenant_code = $"{tenant_id}";
       
-      return IsActive;
+      return GetTenantValue(tenant_code);
     }
   }
   
@@ -176,7 +216,30 @@ public sealed class FeatureFlag : TypedEnumGuid<FeatureFlag>
     return _IsActiveDefault;
   } 
   
-  public List<FlagResolution> Resovle(string? tenant_code = null)
+  private bool GetTenantValue(string tenant_code)
+  {        
+    Initialize();
+    
+    var config = _cached_config;
+    if (config is null)
+      return IsActive;
+  
+    if(config.Tenants.TryGetValue(tenant_code, out var tenant_flags) &&
+       tenant_flags.TryGetValue(tenant_code, out bool is_active))
+    {
+      return is_active;
+    }
+    
+    return IsActive;
+  }
+  
+  public List<FlagResolution> Resolve(int tenant_id)
+  {
+    var tenant_code = $"{tenant_id}";
+    return Resolve(tenant_code);
+  }
+  
+  public List<FlagResolution> Resolve(string? tenant_code = null)
   {
     var priority = 0;
     var results  = new List<FlagResolution>();
