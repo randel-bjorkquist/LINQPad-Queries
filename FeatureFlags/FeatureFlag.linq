@@ -14,8 +14,8 @@
 //-------------------------------------------------------------------------------------------------
 #load "..\TypedEnums\TypedEnum"
 #load ".\FeatureFlagConfig"
-#load ".\FlagValueSource"
-#load ".\FlagResolution"
+#load ".\FeatureFlagValueSource"
+#load ".\FeatureFlagResolution"
 
 //-------------------------------------------------------------------------------------------------
 public sealed partial class FeatureFlag : TypedEnumGuid<FeatureFlag>
@@ -108,16 +108,16 @@ public sealed partial class FeatureFlag : TypedEnumGuid<FeatureFlag>
     return IsActive;
   }
   
-  public List<FlagResolution> Resolve(int tenant_id)
+  public List<FeatureFlagResolution> Resolve(int tenant_id)
   {
     var tenant_code = tenant_id.ToString();
     return Resolve(tenant_code);
   }
   
-  public List<FlagResolution> Resolve(string? tenant_code = null)
+  public List<FeatureFlagResolution> Resolve(string? tenant_code = null)
   {
     var priority = 0;
-    var results  = new List<FlagResolution>();
+    var results  = new List<FeatureFlagResolution>();
 
     Initialize();
     var config = _cached_config;
@@ -129,7 +129,11 @@ public sealed partial class FeatureFlag : TypedEnumGuid<FeatureFlag>
         tenant_flags.TryGetValue(Code, out bool tenant_value))
     {
       priority = 1;
-      results.Add(new FlagResolution(Description, tenant_code, FlagValueSource.Tenant, priority, tenant_value));
+      results.Add(new FeatureFlagResolution( Description
+                                            ,tenant_code
+                                            ,FeatureFlagValueSource.Tenant
+                                            ,priority
+                                            ,tenant_value ));
     }    
     
     // global ...
@@ -137,12 +141,20 @@ public sealed partial class FeatureFlag : TypedEnumGuid<FeatureFlag>
        config.Global.TryGetValue(Code, out bool global_value))
     {
       priority = results.Any() ? 2 : 1;
-      results.Add(new FlagResolution(Description, tenant_code, FlagValueSource.Global, priority, global_value));
+      results.Add(new FeatureFlagResolution( Description
+                                            ,tenant_code
+                                            ,FeatureFlagValueSource.Global
+                                            ,priority
+                                            ,global_value ));
     }
 
     // default ...
     priority = results.Any() ? results.Count() == 2 ? 3 : 2 : 1;
-    results.Add(new FlagResolution(Description, tenant_code, FlagValueSource.Default, priority, _IsActiveDefault));
+    results.Add(new FeatureFlagResolution( Description
+                                          ,tenant_code
+                                          ,FeatureFlagValueSource.Default
+                                          ,priority
+                                          ,_IsActiveDefault ));
 
     return results;
   }

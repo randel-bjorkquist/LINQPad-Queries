@@ -9,8 +9,8 @@
 #load ".\FeatureFlag"
 #load ".\FeatureFlag.Definitions"
 #load ".\FeatureFlagConfig"
-#load ".\FlagValueSource"
-#load ".\FlagResolution"
+#load ".\FeatureFlagValueSource"
+#load ".\FeatureFlagResolution"
 
 //-------------------------------------------------------------------------------------------------
 void Main()
