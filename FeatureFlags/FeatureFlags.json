@@ -12,11 +12,8 @@
     "TenantB": {
       "NewPaymentFlow": false
     },
-    "1190": {
+    "TenantC": {
       "CustomReports": false
-    },
-    "DemonstrationMA": {
-      "CustomReports": true
     }
   }
 }

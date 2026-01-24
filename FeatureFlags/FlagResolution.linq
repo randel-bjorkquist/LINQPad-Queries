@@ -1,12 +1,7 @@
-<Query Kind="Program" />
+<Query Kind="Statements" />
 
 //-------------------------------------------------------------------------------------------------
-#load "..\FeatureFlags\FlagValueSource"
-
-//-------------------------------------------------------------------------------------------------
-void Main()
-{  
-}
+#load ".\FlagValueSource"
 
 //-------------------------------------------------------------------------------------------------
 public readonly record struct FlagResolution( string FeatureFlag

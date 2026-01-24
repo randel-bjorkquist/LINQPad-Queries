@@ -4,171 +4,20 @@
 </Query>
 
 //-------------------------------------------------------------------------------------------------
-#load "..\Class-Based Enums & Flags\TypedEnum (EventType)"
-#load "..\Class-Based Enums & Flags\HousingAuthority"
-#load "..\FeatureFlags\FeatureFlag.Definitions"
-#load "..\FeatureFlags\FeatureFlagConfig"
-#load "..\FeatureFlags\FlagValueSource"
-#load "..\FeatureFlags\FlagResolution"
+//NOTE: This is a C# program because 'FeatureFlag' is a sealed partial class, with its specific, 
+//      instances declared in the 'FeatureFlag.Definitions' file. This file defines the what a
+//      'FeatureFlag' is, by extending the 'TypedEnumGuid' type.
+//
+//ERROR: pressing 'F5' in an attempt to 'run' this file will generate the exception "Cannot find
+//       Main method." Which is only, because this file is not meant to be run by itself.
 
 //-------------------------------------------------------------------------------------------------
-void Main()
-{
-  #region COMMENTED OUT: R&D CODE ...
+#load "..\TypedEnums\TypedEnum"
+#load ".\FeatureFlagConfig"
+#load ".\FlagValueSource"
+#load ".\FlagResolution"
 
-  //var service = new FeatureFlagService("FeatureFlags.json");
-  //service.IsActive("InspectionSaved").Dump();  // true  
-
-  //NOTE: Make sure the JSON file exists in the same folder as your 
-  //      LINQPad query (or adjust the path/filename below if needed) ...
-  //FeatureFlag.Initialize("featureflags.json");
-  //FeatureFlag.Initialize();
-
-  var flag = FeatureFlag.CustomReports;
-  flag.Dump("var flag = mcsFeatureFlag.CustomReports;", 0);
-  
-  //flag = FeatureFlag.CustomReports["TenantA"];
-  
-  if (FeatureFlag.CustomReports)
-    $"FeatureFlag.CustomReports is active."
-      .Dump("if (FeatureFlag.CustomReports)");
-  else
-    $"FeatureFlag.CustomReports is NOT active."
-      .Dump("if (FeatureFlag.CustomReports)");
-  
-  FeatureFlag.NewPaymentFlow.Dump("FeatureFlag.NewPaymentFlow");
-
-  if(FeatureFlag.NewPaymentFlow)
-    $"FeatureFlag.NewPaymentFlow is active."
-      .Dump("if (FeatureFlag.NewPaymentFlow)");
-  else
-    $"FeatureFlag.NewPaymentFlow is NOT active."
-      .Dump("if (FeatureFlag.NewPaymentFlow)");
-
-
-
-  var tenant_code = "TenantA";
-  tenant_code.Dump("var tenant_code = \"TenantA\";");
-
-  if (FeatureFlag.NewPaymentFlow[tenant_code])
-    $"FeatureFlag.NewPaymentFlow for '{tenant_code}' is active."
-      .Dump($"if (FeatureFlag.NewPaymentFlow[{tenant_code}])");
-  else
-    $"FeatureFlag.NewPaymentFlow for '{tenant_code}' is 'not' active."
-      .Dump($"if (FeatureFlag.NewPaymentFlow[{tenant_code}])");
-
-
-  if (FeatureFlag.NewPaymentFlow[null])
-    $"FeatureFlag.NewPaymentFlow for 'null' is active."
-      .Dump($"if (FeatureFlag.NewPaymentFlow['null'])");
-  else
-    $"FeatureFlag.NewPaymentFlow for 'null' is 'not' active."
-      .Dump($"if (FeatureFlag.NewPaymentFlow['null'])");
-
-
-
-  var pha_id = 1190;  // pulled from state ...
-  var event_type = HousingAuthority.GetByID(pha_id);
-  var code = event_type.Code;
-  var event_type_code = HousingAuthority.GetByID(pha_id).Code;
-
-  var feature_flag = FeatureFlag.NewPaymentFlow[code];
-  feature_flag.Dump($"var feature_flag = FeatureFlag.NewPaymentFlow[{code}];");
-
-  //if(FeatureFlag.NewPaymentFlow[HousingAuthority.GetByID(1190).Code])
-  if (FeatureFlag.NewPaymentFlow[code])
-    $"FeatureFlag.NewPaymentFlow for '{event_type.ToString()}' is active."
-      .Dump($"if (FeatureFlag.NewPaymentFlow[{code}])");
-  else
-    $"FeatureFlag.NewPaymentFlow for '{event_type.ToString()}' is 'not' active."
-      .Dump($"if (FeatureFlag.NewPaymentFlow[{code}])");
-  
-  
-//  if (FeatureFlag.NewPaymentFlow[pha_id])
-  if (FeatureFlag.NewPaymentFlow[1190])
-    $"FeatureFlag.NewPaymentFlow for '{event_type.ToString()}' is active."
-      .Dump("if (FeatureFlag.NewPaymentFlow[1190])");
-  else
-    $"FeatureFlag.NewPaymentFlow for '{event_type.ToString()}' is 'not' active."
-      .Dump("if (FeatureFlag.NewPaymentFlow[1190])");
-  
-  
-  var flags = FeatureFlag.GetAll();
-  flags.Dump("var flags = mcsFeatureFlag.GetAll();", 0);  
-
-  FeatureFlag.CustomReports.Resolve("TenantA").Dump("FeatureFlag.CustomReports.Resovle('TenantA')", 0);
-  FeatureFlag.NewPaymentFlow.Resolve("TenantA").Dump("FeatureFlag.NewPaymentFlow.Resovle('TenantA')", 0);
-  FeatureFlag.AdvancedReporting.Resolve("TenantA").Dump("FeatureFlag.AdvancedReporting.Resovle('TenantA')", 0);
-  
-  FeatureFlag.CustomReports.Resolve("TenantB").Dump("FeatureFlag.CustomReports.Resovle('TenantB')", 0);
-  FeatureFlag.NewPaymentFlow.Resolve("TenantB").Dump("FeatureFlag.NewPaymentFlow.Resovle('TenantB')", 0);
-  FeatureFlag.AdvancedReporting.Resolve("TenantB").Dump("FeatureFlag.AdvancedReporting('TenantB')", 0);
-
-  FeatureFlag.CustomReports.Resolve(1190).Dump("FeatureFlag.CustomReports.Resovle(1190)", 0);
-  FeatureFlag.NewPaymentFlow.Resolve(1190).Dump("FeatureFlag.NewPaymentFlow.Resovle(1190)", 0);
-  
-  FeatureFlag.CustomReports.Resolve("Demonstration").Dump("FeatureFlag.CustomReports.Resovle('Demonstration')", 0);
-
-  #endregion
-  
-  #region COMMENTED OUT: looping via while(true) ...
-//  
-//  "Feature Flag Test - Press Enter to refresh, Q to quit".Dump();
-//  
-//  while (true)
-//  {
-//    Console.WriteLine("\nCurrent 'global' state (as of " + DateTime.Now.ToLongTimeString() + "):");
-//    Console.WriteLine("--------------------------------------------------");
-//  
-//    DumpFlag(FeatureFlag.CustomReports);
-//    DumpFlag(FeatureFlag.NewPaymentFlow);
-//    DumpFlag(FeatureFlag.AdvancedReporting);
-//  
-//    Console.WriteLine("\nTenant-specific examples:");
-//    Console.WriteLine("--------------------------------------------------");
-//    
-//    Console.WriteLine($"CustomReports     for TenantA: {FeatureFlag.CustomReports["TenantA"]}");
-//    Console.WriteLine($"NewPaymentFlow    for TenantA: {FeatureFlag.NewPaymentFlow["TenantA"]}");
-//    Console.WriteLine($"AdvancedReporting for TenantA: {FeatureFlag.AdvancedReporting["TenantA"]}");
-//    
-//    Console.WriteLine("-------------------------------------");
-//    
-//    Console.WriteLine($"CustomReports     for TenantB: {FeatureFlag.CustomReports["TenantB"]}");
-//    Console.WriteLine($"NewPaymentFlow    for TenantB: {FeatureFlag.NewPaymentFlow["TenantB"]}");
-//    Console.WriteLine($"AdvancedReporting for TenantB: {FeatureFlag.AdvancedReporting["TenantB"]}");
-//
-//    //Console.WriteLine("--------------------------------------------------");
-//    //
-//    //FeatureFlag.CustomReports.Resovle("TenantA").Dump("FeatureFlag.CustomReports.Resovle(\"TenantA\")");
-//    //FeatureFlag.NewPaymentFlow.Resovle("TenantA").Dump("FeatureFlag.CustomReports.Resovle(\"TenantA\")");
-//    //FeatureFlag.AdvancedReporting.Resovle("TenantA").Dump("FeatureFlag.CustomReports.Resovle(\"TenantA\")");
-//    //
-//    //Console.WriteLine("-------------------------------------");
-//    //
-//    //FeatureFlag.CustomReports.Resovle("TenantB").Dump("FeatureFlag.CustomReports.Resovle(\"TenantB\")");
-//    //FeatureFlag.NewPaymentFlow.Resovle("TenantB").Dump("FeatureFlag.CustomReports.Resovle(\"TenantB\")");
-//    //FeatureFlag.AdvancedReporting.Resovle("TenantB").Dump("FeatureFlag.CustomReports.Resovle(\"TenantB\")");
-//
-//    Console.Write("\nPress Enter to refresh, Q to quit: ");
-//    var key = Console.Read();
-//    if (key == 'q' || key == 'Q') break;
-//    
-//    Console.WriteLine();
-//    
-//    // Optional: force reload (mainly for debugging)
-//    //FeatureFlag.Initialize();
-//  }
-//  
-//  "Done. You can now edit featureflags.json and re-run or continue watching.".Dump();  
-//
-  #endregion
-}
-
-private void DumpFlag(FeatureFlag flag)
-{
-  Console.WriteLine( $"{flag.Code,-18}  IsActive: {flag.IsActive,5} → bool: {(bool)flag}");
-}
-
+//-------------------------------------------------------------------------------------------------
 public sealed partial class FeatureFlag : TypedEnumGuid<FeatureFlag>
 {
   private volatile bool _IsActiveDefault;
@@ -191,7 +40,6 @@ public sealed partial class FeatureFlag : TypedEnumGuid<FeatureFlag>
     Initialize();
     
     return flag.IsActive;
-    //return flag is null ? throw new ArgumentNullException(nameof(flag)) : flag.IsActive;
   }
   
   /// <summary>
@@ -204,7 +52,7 @@ public sealed partial class FeatureFlag : TypedEnumGuid<FeatureFlag>
   public bool this[string? tenant_code]
   {
     get {
-      if(string.IsNullOrEmpty(tenant_code?.Trim()))
+      if(string.IsNullOrWhiteSpace(tenant_code))
         return IsActive;
       
       return GetTenantValue(tenant_code);
@@ -224,7 +72,7 @@ public sealed partial class FeatureFlag : TypedEnumGuid<FeatureFlag>
       if(tenant_id <= 0)
         return IsActive;
       
-      string tenant_code = $"{tenant_id}";
+      string tenant_code = tenant_id.ToString();
       
       return GetTenantValue(tenant_code);
     }
@@ -262,7 +110,7 @@ public sealed partial class FeatureFlag : TypedEnumGuid<FeatureFlag>
   
   public List<FlagResolution> Resolve(int tenant_id)
   {
-    var tenant_code = $"{tenant_id}";
+    var tenant_code = tenant_id.ToString();
     return Resolve(tenant_code);
   }
   
@@ -275,17 +123,18 @@ public sealed partial class FeatureFlag : TypedEnumGuid<FeatureFlag>
     var config = _cached_config;
     
     // tenant ...
-    if( !string.IsNullOrEmpty(tenant_code.Trim())
-     && config is not null
-     && config.Tenants.TryGetValue(tenant_code, out var tenant_flags)
-     && tenant_flags.TryGetValue(Code, out bool tenant_value))
+    if( !string.IsNullOrWhiteSpace(tenant_code)                       && 
+        config is not null                                            && 
+        config.Tenants.TryGetValue(tenant_code, out var tenant_flags) &&
+        tenant_flags.TryGetValue(Code, out bool tenant_value))
     {
       priority = 1;
       results.Add(new FlagResolution(Description, tenant_code, FlagValueSource.Tenant, priority, tenant_value));
     }    
     
     // global ...
-    if(config.Global.TryGetValue(Code, out bool global_value))
+    if(config is not null && 
+       config.Global.TryGetValue(Code, out bool global_value))
     {
       priority = results.Any() ? 2 : 1;
       results.Add(new FlagResolution(Description, tenant_code, FlagValueSource.Global, priority, global_value));
@@ -315,8 +164,7 @@ public sealed partial class FeatureFlag : TypedEnumGuid<FeatureFlag>
   /// </summary>
   public static void Initialize(string config_file_name = "FeatureFlags.json")
   {
-    //string file_path = @"C:\Users\work\OneDrive - Management Computer Services\Documents\LINQPad Queries\Class-Based Enums & Flags";
-    string file_path = @"C:\Users\work\OneDrive - Management Computer Services\Documents\LINQPad Queries\FeatureFlags";
+    string file_path = @"D:\repos\randel-bjorkquist\LINQPad-Queries\FeatureFlags";
     
     if(_config_path is not null)
       return;
@@ -347,6 +195,7 @@ public sealed partial class FeatureFlag : TypedEnumGuid<FeatureFlag>
       
       _watcher.Renamed += OnConfigFileRenamed;
       _watcher.Error   += OnWatcherError;
+      
       _watcher.InternalBufferSize = 64 * 1024;  // max 64KB
     }
   }
@@ -410,7 +259,7 @@ public sealed partial class FeatureFlag : TypedEnumGuid<FeatureFlag>
 
   private static void OnConfigFileChanged(object? sender, FileSystemEventArgs e)
   {
-    if (Volatile.Read(ref _watcher_disposed) == 1)
+    if(Volatile.Read(ref _watcher_disposed) == 1)
       return;
     
     DebouncedReload();
@@ -451,7 +300,7 @@ public sealed partial class FeatureFlag : TypedEnumGuid<FeatureFlag>
     
     lock(_config_lock)
     {
-      if (_watcher is null)
+      if(_watcher is null)
         return;  
       
       _watcher.EnableRaisingEvents = false;
@@ -463,25 +312,4 @@ public sealed partial class FeatureFlag : TypedEnumGuid<FeatureFlag>
   }
       
   #endregion
-  
-  #region COMMENTED OUT: specific FeatureFlag definitions moved to 'FeatureFlags.linq'
-  
-  //public static readonly FeatureFlag CustomReports      = new(Guid.Parse("00000000-0000-0000-0000-000000000000") ,"Customer Reports"   ,nameof(CustomReports));
-  //public static readonly FeatureFlag NewPaymentFlow     = new(Guid.Parse("00000000-0000-0000-0000-000000000001") ,"New Payment Flow"   ,nameof(NewPaymentFlow));
-  //public static readonly FeatureFlag AdvancedReporting  = new(Guid.Parse("00000000-0000-0000-0000-000000000002") ,"Advanced Reporting" ,nameof(AdvancedReporting));
-  
-  //public static readonly FeatureFlag CustomReports      = new(Guid.Parse("00000000-0000-0000-0000-000000000000") ,"Customer Reports"   ,nameof(CustomReports)     ,true);
-  //public static readonly FeatureFlag NewPaymentFlow     = new(Guid.Parse("00000000-0000-0000-0000-000000000001") ,"New Payment Flow"   ,nameof(NewPaymentFlow)    ,true);
-  //public static readonly FeatureFlag AdvancedReporting  = new(Guid.Parse("00000000-0000-0000-0000-000000000002") ,"Advanced Reporting" ,nameof(AdvancedReporting) ,true);
-  
-  #endregion
 }
-
-//public class FeatureFlagConfig
-//{
-//  public Dictionary<string, bool> Global                      { get; set; } = new();  // key = TypedEnum.Code (field name)
-//  public Dictionary<string, Dictionary<string, bool>> Tenants { get; set; } = new();  // key = TypedEnum.Code (field name)
-//}
-
-//public enum FlagValueSource { Default, Global, Tenant }
-//public readonly record struct FlagResolution(string FeatureFlag, string? TenantCode, FlagValueSource Source, int Priority, bool Value);
