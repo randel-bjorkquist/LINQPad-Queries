@@ -20,7 +20,7 @@ public interface ITypedEnum<TSelf, Tid>
   // Instance methods (these can be abstract in interface)
   string ToString(string? format, IFormatProvider? provider = null);  
   object AsJsonObject();
-  string AsJsonString(JsonSerializerOptions options = null);
+  string AsJsonString(JsonSerializerOptions? options = null);
   
   // Equality & comparison (instance methods)
   bool Equals(TSelf? other);
@@ -108,7 +108,7 @@ public abstract class TypedEnum<TSelf, Tid> : IFormattable, ITypedEnum<TSelf, Ti
   /// Console.WriteLine($"{evt:C}");         // Output: "InspectionSaved"
   /// </code>
   /// </example>
-  public string ToString(string format, IFormatProvider provider = null)
+  public string ToString(string? format, IFormatProvider? provider = null)
   {
     return format switch
     {
@@ -124,7 +124,10 @@ public abstract class TypedEnum<TSelf, Tid> : IFormattable, ITypedEnum<TSelf, Ti
         _ => Description                                            // fallbase
     };
   }
-
+    
+  /// <summary>
+  /// This overrides 'object.ToString()' using the 'Full verbose format' as default
+  /// </summary>
   public override string ToString()
     => ToString(format: "g", provider: null);
 
@@ -137,22 +140,22 @@ public abstract class TypedEnum<TSelf, Tid> : IFormattable, ITypedEnum<TSelf, Ti
   /// <summary>
   /// Returns a JSON string representation. This is a convenience wrapper over AsJsonObject().
   /// </summary>
-  public string AsJsonString(JsonSerializerOptions options = null)
+  public string AsJsonString(JsonSerializerOptions? options = null)
     => JsonSerializer.Serialize(AsJsonObject(), options);
   
   #region enum-like equality: compare based on ID only (ignore Description for uniqueness)
   
-  public override bool Equals(object obj)
+  public override bool Equals(object? obj)
     => obj is TSelf other && Equals(other);
   
-  public virtual bool Equals(TSelf other)
+  public virtual bool Equals(TSelf? other)
     => other is not null && EqualityComparer<Tid>.Default.Equals(ID, other.ID);
   
   public override int GetHashCode()
     => EqualityComparer<Tid>.Default.GetHashCode(ID);
   
   public static bool operator == (TypedEnum<TSelf, Tid> left, TypedEnum<TSelf, Tid> right)
-    => ReferenceEquals(left, right) || (left is not null && right is not null && left.Equals((TSelf)right));
+    => ReferenceEquals(left, right) || left is not null && right is not null && left.Equals((TSelf)right);
   
   public static bool operator != (TypedEnum<TSelf, Tid> left, TypedEnum<TSelf, Tid> right)
     => !(left == right);
@@ -172,7 +175,7 @@ public abstract class TypedEnum<TSelf, Tid> : IFormattable, ITypedEnum<TSelf, Ti
   #endregion
 }
 
-// short/int16 --------------------------------------------------------------------------
+// short/Int16 --------------------------------------------------------------------------
 public abstract class TypedEnumShort<Tself> : TypedEnumInt16<Tself>
   where Tself : TypedEnumShort<Tself>
 {
@@ -180,170 +183,170 @@ public abstract class TypedEnumShort<Tself> : TypedEnumInt16<Tself>
     : base(id, description, code) { }
 }
 
-public abstract class TypedEnumInt16<Tself> : TypedEnum<Tself, Int16>
-  where Tself : TypedEnumInt16<Tself>
+public abstract class TypedEnumInt16<TSelf> : TypedEnum<TSelf, Int16>
+  where TSelf : TypedEnumInt16<TSelf>
 {
   protected TypedEnumInt16(Int16 id, string description, string code)
     : base(id, description, code) { }
   
   #region 'explicit/implicit' operators ...
   
-  // short -> EventType (explicit cast only - forces developer to think about it)
+  // short/Int16 -> TypedEnum (explicit cast only - forces developer to think about it)
   [Obsolete("Direct casting from int is discouraged. Use GetById(short) for clarity and future-proofing.", false)]
-  public static explicit operator TypedEnumInt16<Tself>(Int16 id)
+  public static explicit operator TypedEnumInt16<TSelf>(Int16 id)
     => GetByID(id);
     
-  // EventType -> short (implicit or explicit)
-  [Obsolete("Prefer mcsEventType.Field.ID for clarity and future-proofing.", false)]
-  public static implicit operator Int16(TypedEnumInt16<Tself> type)
+  // TypedEnum -> short/Int16 (implicit or explicit)
+  [Obsolete("Prefer TypedEnum.Field.ID for clarity and future-proofing.", false)]
+  public static implicit operator Int16(TypedEnumInt16<TSelf> type)
     => type is null ? throw new ArgumentNullException(nameof(type)) : type.ID;
   
-  [Obsolete("Prefer mcsEventType.Field.Description for clarity and future-proofing.", false)]
-  public static implicit operator string(TypedEnumInt16<Tself> type)
+  [Obsolete("Prefer TypedEnum.Field.Description for clarity and future-proofing.", false)]
+  public static implicit operator string(TypedEnumInt16<TSelf> type)
     => type is null ? throw new ArgumentNullException(nameof(type)) : type.Description;
   
   #endregion
 }
 
-// int/int32 ----------------------------------------------------------------------------
-public abstract class TypedEnumInt<Tself> : TypedEnumInt32<Tself>
-  where Tself : TypedEnumInt<Tself>
+// int/Int32 ----------------------------------------------------------------------------
+public abstract class TypedEnumInt<TSelf> : TypedEnumInt32<TSelf>
+  where TSelf : TypedEnumInt<TSelf>
 {
   protected TypedEnumInt(int id, string description, string code)
     : base(id, description, code) { }
 }
 
-public abstract class TypedEnumInt32<Tself> : TypedEnum<Tself, Int32>
-  where Tself : TypedEnumInt32<Tself>
+public abstract class TypedEnumInt32<TSelf> : TypedEnum<TSelf, Int32>
+  where TSelf : TypedEnumInt32<TSelf>
 {
   protected TypedEnumInt32(Int32 id, string description, string code)
     : base(id, description, code) { }
     
   #region 'explicit/implicit' operators ...
   
-  // int -> EventType (explicit cast only - forces developer to think about it)
+  // int/Int32 -> TypedEnum (explicit cast only - forces developer to think about it)
   [Obsolete("Direct casting from int is discouraged. Use GetById(int) for clarity and future-proofing.", false)]
-  public static explicit operator TypedEnumInt32<Tself>(int id)
+  public static explicit operator TypedEnumInt32<TSelf>(int id)
     => GetByID(id);
     
-  // EventType -> int (implicit or explicit)
-  [Obsolete("Prefer mcsEventType.Field.ID for clarity and future-proofing.", false)]
-  public static implicit operator int(TypedEnumInt32<Tself> type)
+  // TypedEnum -> int/Int32 (implicit or explicit)
+  [Obsolete("Prefer TypedEnum.Field.ID for clarity and future-proofing.", false)]
+  public static implicit operator int(TypedEnumInt32<TSelf> type)
     => type is null ? throw new ArgumentNullException(nameof(type)) : type.ID;
   
-  [Obsolete("Prefer mcsEventType.Field.Description for clarity and future-proofing.", false)]
-  public static implicit operator string(TypedEnumInt32<Tself> type)
+  [Obsolete("Prefer TypedEnum.Field.Description for clarity and future-proofing.", false)]
+  public static implicit operator string(TypedEnumInt32<TSelf> type)
     => type is null ? throw new ArgumentNullException(nameof(type)) : type.Description;
   
   #endregion
 }
 
-// long/int64 ---------------------------------------------------------------------------
-public abstract class TypedEnumLong<Tself> : TypedEnumInt64<Tself>
-  where Tself : TypedEnumLong<Tself>
+// long/Int64 ---------------------------------------------------------------------------
+public abstract class TypedEnumLong<TSelf> : TypedEnumInt64<TSelf>
+  where TSelf : TypedEnumLong<TSelf>
 {
   protected TypedEnumLong(long id, string description, string code)
     : base(id, description, code) { }
 }
 
-public abstract class TypedEnumInt64<Tself> : TypedEnum<Tself, Int64>
-  where Tself : TypedEnumInt64<Tself>
+public abstract class TypedEnumInt64<TSelf> : TypedEnum<TSelf, Int64>
+  where TSelf : TypedEnumInt64<TSelf>
 {
   protected TypedEnumInt64(Int64 id, string description, string code)
     : base(id, description, code) { }
   
   #region 'explicit/implicit' operators ...
   
-  // long -> EventType (explicit cast only - forces developer to think about it)
+  // long/Int64 -> TypedEnum (explicit cast only - forces developer to think about it)
   [Obsolete("Direct casting from int is discouraged. Use GetById(long) for clarity and future-proofing.", false)]
-  public static explicit operator TypedEnumInt64<Tself>(Int64 id)
+  public static explicit operator TypedEnumInt64<TSelf>(Int64 id)
     => GetByID(id);
     
-  // EventType -> long (implicit or explicit)
-  [Obsolete("Prefer mcsEventType.Field.ID for clarity and future-proofing.", false)]
-  public static implicit operator Int64(TypedEnumInt64<Tself> type)
+  // TypedEnum -> long/Int64 (implicit or explicit)
+  [Obsolete("Prefer TypedEnum.Field.ID for clarity and future-proofing.", false)]
+  public static implicit operator Int64(TypedEnumInt64<TSelf> type)
     => type is null ? throw new ArgumentNullException(nameof(type)) : type.ID;
   
-  [Obsolete("Prefer mcsEventType.Field.Description for clarity and future-proofing.", false)]
-  public static implicit operator string(TypedEnumInt64<Tself> type)
+  [Obsolete("Prefer TypedEnum.Field.Description for clarity and future-proofing.", false)]
+  public static implicit operator string(TypedEnumInt64<TSelf> type)
     => type is null ? throw new ArgumentNullException(nameof(type)) : type.Description;
   
   #endregion
 }
 
-// int128 -------------------------------------------------------------------------------
-public abstract class TypedEnumInt128<Tself> : TypedEnum<Tself, Int128>
-  where Tself : TypedEnumInt128<Tself>
+// Int128 -------------------------------------------------------------------------------
+public abstract class TypedEnumInt128<TSelf> : TypedEnum<TSelf, Int128>
+  where TSelf : TypedEnumInt128<TSelf>
 {
   protected TypedEnumInt128(Int128 id, string description, string code)
     : base(id, description, code) { }
   
   #region 'explicit/implicit' operators ...
   
-  // Int128t -> EventType (explicit cast only - forces developer to think about it)
+  // Int128 -> TypedEnum (explicit cast only - forces developer to think about it)
   [Obsolete("Direct casting from int is discouraged. Use GetById(Int128) for clarity and future-proofing.", false)]
-  public static explicit operator TypedEnumInt128<Tself>(Int128 id)
+  public static explicit operator TypedEnumInt128<TSelf>(Int128 id)
     => GetByID(id);
     
-  // EventType -> Int128 (implicit or explicit)
-  [Obsolete("Prefer mcsEventType.Field.ID for clarity and future-proofing.", false)]
-  public static implicit operator Int128(TypedEnumInt128<Tself> type)
+  // TypedEnum -> Int128 (implicit or explicit)
+  [Obsolete("Prefer TypedEnum.Field.ID for clarity and future-proofing.", false)]
+  public static implicit operator Int128(TypedEnumInt128<TSelf> type)
     => type is null ? throw new ArgumentNullException(nameof(type)) : type.ID;
   
-  [Obsolete("Prefer mcsEventType.Field.Description for clarity and future-proofing.", false)]
-  public static implicit operator string(TypedEnumInt128<Tself> type)
+  [Obsolete("Prefer TypedEnum.Field.Description for clarity and future-proofing.", false)]
+  public static implicit operator string(TypedEnumInt128<TSelf> type)
     => type is null ? throw new ArgumentNullException(nameof(type)) : type.Description;
   
   #endregion
 }
 
 // guid ---------------------------------------------------------------------------------
-public abstract class TypedEnumGuid<Tself> : TypedEnum<Tself, Guid>
-  where Tself : TypedEnumGuid<Tself>
+public abstract class TypedEnumGuid<TSelf> : TypedEnum<TSelf, Guid>
+  where TSelf : TypedEnumGuid<TSelf>
 {
   protected TypedEnumGuid(Guid id, string description, string code)
     : base(id, description, code) { }
   
   #region 'explicit/implicit' operators ...
   
-  // guid -> EventType (explicit cast only - forces developer to think about it)
+  // Guid -> TypedEnum (explicit cast only - forces developer to think about it)
   [Obsolete("Direct casting from int is discouraged. Use GetById(guid) for clarity and future-proofing.", false)]
-  public static explicit operator TypedEnumGuid<Tself>(Guid id)
+  public static explicit operator TypedEnumGuid<TSelf>(Guid id)
     => GetByID(id);
     
-  // EventType -> guid (implicit or explicit)
-  [Obsolete("Prefer mcsEventType.Field.ID for clarity and future-proofing.", false)]
-  public static implicit operator Guid(TypedEnumGuid<Tself> type)
+  // TypedEnum -> Guid (implicit or explicit)
+  [Obsolete("Prefer TypedEnum.Field.ID for clarity and future-proofing.", false)]
+  public static implicit operator Guid(TypedEnumGuid<TSelf> type)
     => type is null ? throw new ArgumentNullException(nameof(type)) : type.ID;
   
-  [Obsolete("Prefer mcsEventType.Field.Description for clarity and future-proofing.", false)]
-  public static implicit operator string(TypedEnumGuid<Tself> type)
+  [Obsolete("Prefer TypedEnum.Field.Description for clarity and future-proofing.", false)]
+  public static implicit operator string(TypedEnumGuid<TSelf> type)
     => type is null ? throw new ArgumentNullException(nameof(type)) : type.Description;
   
   #endregion
 }
 
 // string -------------------------------------------------------------------------------
-public abstract class TypedEnumString<Tself> : TypedEnum<Tself, string>
-  where Tself : TypedEnumString<Tself>
+public abstract class TypedEnumString<TSelf> : TypedEnum<TSelf, string>
+  where TSelf : TypedEnumString<TSelf>
 {
   protected TypedEnumString(string id, string description, string code)
     : base(id, description, code) { }
   
   #region 'explicit/implicit' operators ...
   
-  // string -> EventType (explicit cast only - forces developer to think about it)
+  // string -> TypedEnum (explicit cast only - forces developer to think about it)
   [Obsolete("Direct casting from int is discouraged. Use GetById(string) for clarity and future-proofing.", false)]
-  public static explicit operator TypedEnumString<Tself>(string id)
+  public static explicit operator TypedEnumString<TSelf>(string id)
     => GetByID(id);
     
-  // EventType -> string (implicit or explicit)
-  //[Obsolete("Prefer mcsEventType.Field.ID for clarity and future-proofing.", false)]
-  //public static implicit operator string(TypedEnumString<Tself> type)
+  // TypedEnum -> string (implicit or explicit)
+  //[Obsolete("Prefer TypedEnum.Field.ID for clarity and future-proofing.", false)]
+  //public static implicit operator string(TypedEnumString<TSelf> type)
   //  => type is null ? throw new ArgumentNullException(nameof(type)) : type.ID;
   
-  [Obsolete("Prefer mcsEventType.Field.Description for clarity and future-proofing.", false)]
-  public static implicit operator string(TypedEnumString<Tself> type)
+  [Obsolete("Prefer TypedEnum.Field.Description for clarity and future-proofing.", false)]
+  public static implicit operator string(TypedEnumString<TSelf> type)
     => type is null ? throw new ArgumentNullException(nameof(type)) : type.Description;
   
   #endregion
