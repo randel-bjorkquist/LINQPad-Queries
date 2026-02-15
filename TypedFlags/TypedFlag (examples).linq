@@ -4,12 +4,12 @@
 #load "TypedEnums\TypedEnum"
 #load "TypedFlags\TypedFlag"
 #load "TypedFlags\Permissions"
+#load "TypedFlags\FeatureFlags"
+#load "TypedFlags\TypedFlagExtensions"
 
 // Demo Program --------------------------------------------------------------------------------------------------
 void Main()
 {
-  "=== TypedFlags Demo ===".Dump();
-  
   #region 1. Basic combination -----------------------------------------------------------------------------------
   
   var readWrite = Permissions.Read | Permissions.Write;
@@ -206,6 +206,50 @@ void Main()
        ,Note             = areSame ? "✅ Cast returns cached static field" 
                                    : "⚠️ Cast created new instance (not cached)"}
     .Dump("Reference Equality Test", 0);
+
+  #endregion
+  
+  #region 15. Extension Methods ----------------------------------------------------------------------------------
+  
+  var perms = Permissions.None
+                         .With(Permissions.Read)
+                         .With(Permissions.Write);
+
+  var modified = perms.Without(Permissions.Read);
+
+  new { StartWithNone = Permissions.None
+       ,InitialFlags  = Permissions.None.ToFlags()
+       ,AfterAdding   = perms
+       ,AddedFlags    = perms.ToFlags()
+       ,AfterRemoving = modified
+       ,FinalFlags    = modified.ToFlags() }
+    .Dump("15. Extension Methods", 0);
+  
+  //----------------------------------------------------------------------
+  var permissions = Permissions.All;
+  var with_out    = permissions.Without(Permissions.Execute)
+                               .Without(Permissions.Delete);
+                               
+  new { StartWithAll  = Permissions.All
+       ,InitialFlags  = Permissions.All.ToFlags()
+       ,AfterAdding   = "N/A"
+       ,AddedFlags    = "N/A"
+       ,AfterRemoving = with_out
+       ,FinalFlags    = with_out.ToFlags() }
+    .Dump("15. Extension Methods", 0);
+  
+  //----------------------------------------------------------------------
+  var perm = ((Permissions)7).With(Permissions.Delete);
+  var w_o  = ((Permissions)7).Without(Permissions.Execute)
+                             .Without(Permissions.Delete);
+                               
+  new { StartWithAll  = (Permissions)7
+       ,InitialFlags  = ((Permissions)7).ToFlags()
+       ,AfterAdding   = perm
+       ,AddedFlags    = perm.ToFlags()
+       ,AfterRemoving = w_o
+       ,FinalFlags    = w_o.ToFlags() }
+    .Dump("15. Extension Methods", 0);
   
   #endregion
 }

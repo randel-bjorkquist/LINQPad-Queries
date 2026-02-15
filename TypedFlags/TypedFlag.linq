@@ -275,27 +275,27 @@ public abstract class TypedFlag<TSelf, Tid> : TypedEnum<TSelf, Tid>, ITypedFlag<
     {
       // Create instance dynamically - use reflection to call protected constructor
       var type = typeof(TSelf);
-      var ctor = type.GetConstructor(
-        BindingFlags.NonPublic | BindingFlags.Instance,
-        null,
-        new[] { typeof(Tid), typeof(string), typeof(string) },
-        null);
+      var ctor = type.GetConstructor( BindingFlags.NonPublic | BindingFlags.Instance
+                                     ,null
+                                     ,new[] { typeof(Tid), typeof(string), typeof(string) }
+                                     ,null );
 
-      if (ctor == null)
+      if(ctor == null)
       {
-        throw new InvalidOperationException(
-          $"TypedFlag {type.Name} must have a protected constructor: " +
-          $"{type.Name}(TId id, string description, string code)");
+        throw new InvalidOperationException( $"TypedFlag {type.Name} must have a protected constructor: "
+                                           + $"{type.Name}(TId id, string description, string code)" );
       }
 
       // Generate description and code for combined flag
       var individualFlags = GetIndividualFlagsFromId(id);
+      
       var description = individualFlags.Any()
-        ? string.Join(", ", individualFlags.Select(f => f.Description))
-        : "Combined";
+                      ? string.Join(", ", individualFlags.Select(f => f.Description))
+                      : "Combined";
+                      
       var code = individualFlags.Any()
-        ? string.Join(" | ", individualFlags.Select(f => f.Code))
-        : "Combined";
+               ? string.Join(" | ", individualFlags.Select(f => f.Code))
+               : "Combined";
       
       return (TSelf)ctor.Invoke(new object[] { id, description, code });
     });
@@ -348,16 +348,16 @@ public abstract class TypedFlag<TSelf, Tid> : TypedEnum<TSelf, Tid>, ITypedFlag<
   /// <returns>True if single flag, false if combination</returns>
   public bool IsSingleFlag()
   {
-    if (ID is int intId)
+    if(ID is int intId)
       return intId == 0 || (intId & (intId - 1)) == 0;
     
-    if (ID is short shortId)
+    if(ID is short shortId)
       return shortId == 0 || (shortId & (shortId - 1)) == 0;
     
-    if (ID is long longId)
+    if(ID is long longId)
       return longId == 0 || (longId & (longId - 1)) == 0;
     
-    if (ID is Int128 int128Id)
+    if(ID is Int128 int128Id)
       return int128Id == 0 || (int128Id & (int128Id - 1)) == 0;
 
     return false; // Unknown type, assume not single
@@ -378,8 +378,11 @@ public abstract class TypedFlag<TSelf, Tid> : TypedEnum<TSelf, Tid>, ITypedFlag<
   /// </example>
   public static TSelf operator |(TypedFlag<TSelf, Tid> left, TypedFlag<TSelf, Tid> right)
   {
-    if (left == null) throw new ArgumentNullException(nameof(left));
-    if (right == null) throw new ArgumentNullException(nameof(right));
+    if(left  == null) 
+      throw new ArgumentNullException(nameof(left));
+      
+    if(right == null) 
+      throw new ArgumentNullException(nameof(right));
 
     var combinedId = left.ID | right.ID;
     return GetOrCreateCombined(combinedId);
@@ -399,8 +402,11 @@ public abstract class TypedFlag<TSelf, Tid> : TypedEnum<TSelf, Tid>, ITypedFlag<
   /// </example>
   public static TSelf operator &(TypedFlag<TSelf, Tid> left, TypedFlag<TSelf, Tid> right)
   {
-    if (left == null) throw new ArgumentNullException(nameof(left));
-    if (right == null) throw new ArgumentNullException(nameof(right));
+    if(left  == null) 
+      throw new ArgumentNullException(nameof(left));
+      
+    if(right == null) 
+      throw new ArgumentNullException(nameof(right));
 
     var combinedId = left.ID & right.ID;
     return GetOrCreateCombined(combinedId);
@@ -420,8 +426,11 @@ public abstract class TypedFlag<TSelf, Tid> : TypedEnum<TSelf, Tid>, ITypedFlag<
   /// </example>
   public static TSelf operator ^(TypedFlag<TSelf, Tid> left, TypedFlag<TSelf, Tid> right)
   {
-    if (left == null) throw new ArgumentNullException(nameof(left));
-    if (right == null) throw new ArgumentNullException(nameof(right));
+    if(left  == null) 
+      throw new ArgumentNullException(nameof(left));
+      
+    if(right == null) 
+      throw new ArgumentNullException(nameof(right));
 
     var combinedId = left.ID ^ right.ID;
     return GetOrCreateCombined(combinedId);
@@ -446,7 +455,8 @@ public abstract class TypedFlag<TSelf, Tid> : TypedEnum<TSelf, Tid>, ITypedFlag<
   /// </remarks>
   public static TSelf operator ~(TypedFlag<TSelf, Tid> flag)
   {
-    if (flag == null) throw new ArgumentNullException(nameof(flag));
+    if(flag == null) 
+      throw new ArgumentNullException(nameof(flag));
 
     var invertedId = ~flag.ID;
     return GetOrCreateCombined(invertedId);
@@ -470,7 +480,8 @@ public abstract class TypedFlag<TSelf, Tid> : TypedEnum<TSelf, Tid>, ITypedFlag<
   /// </example>
   public bool HasFlag(TSelf flag)
   {
-    if (flag == null) throw new ArgumentNullException(nameof(flag));
+    if(flag == null) 
+      throw new ArgumentNullException(nameof(flag));
 
     var andResult = ID & flag.ID;
     return andResult.Equals(flag.ID);
@@ -489,7 +500,7 @@ public abstract class TypedFlag<TSelf, Tid> : TypedEnum<TSelf, Tid>, ITypedFlag<
   /// </example>
   public bool HasAnyFlag(params TSelf[] flags)
   {
-    if (flags == null || flags.Length == 0)
+    if(flags == null || flags.Length == 0)
       throw new ArgumentException("At least one flag must be provided", nameof(flags));
 
     return flags.Any(HasFlag);
@@ -509,7 +520,7 @@ public abstract class TypedFlag<TSelf, Tid> : TypedEnum<TSelf, Tid>, ITypedFlag<
   /// </example>
   public bool HasAllFlags(params TSelf[] flags)
   {
-    if (flags == null || flags.Length == 0)
+    if(flags == null || flags.Length == 0)
       throw new ArgumentException("At least one flag must be provided", nameof(flags));
 
     return flags.All(HasFlag);
