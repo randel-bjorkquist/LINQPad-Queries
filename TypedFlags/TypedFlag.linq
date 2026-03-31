@@ -580,8 +580,9 @@ public abstract class TypedFlag<TSelf, Tid> : TypedEnum<TSelf, Tid>, ITypedFlag<
     {
       var flags = ToFlags();
       
-      return flags.Any() 
-               ? string.Join(", ", flags.Select(f => f.Code)) 
+      return flags.Any()
+//               ? string.Join(", ", flags.Select(f => f.Code)) 
+               ? $"{string.Join(", ", flags.Select(f => f.Code))} ({ID})"
                : base.ToString(); // Fallback for weird edge cases
     }
     

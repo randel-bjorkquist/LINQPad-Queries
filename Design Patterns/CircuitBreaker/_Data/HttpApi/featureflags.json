@@ -1,0 +1,16 @@
+{
+  "global": {
+    "TextControl.Enabled": true,
+    "PdfExport.Enabled": true,
+    "BetaReporting.Enabled": false
+  },
+  "tenants": {
+    "TenantA": {
+      "BetaReporting.Enabled": true
+    },
+    "TenantB": {
+      "PdfExport.Enabled": false
+    }
+  },
+  "runtime": {}
+}

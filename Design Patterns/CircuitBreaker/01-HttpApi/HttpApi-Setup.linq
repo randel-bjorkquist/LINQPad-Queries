@@ -60,7 +60,7 @@ string FlagFilePath()
   // Resolves to the CircuitBreaker folder on disk, next to your scenario folders
   var queriesRoot        = Path.GetDirectoryName(Util.CurrentQueryPath);        // 01-HttpApi/
   var circuitBreakerRoot = Path.GetFullPath(Path.Combine(queriesRoot, ".."));   // CircuitBreaker/
-  var dataPath           = Path.Combine(circuitBreakerRoot, "Data", "HttpApi");
+  var dataPath           = Path.Combine(circuitBreakerRoot, "_Data", "HttpApi");
 
   Directory.CreateDirectory(dataPath);
 

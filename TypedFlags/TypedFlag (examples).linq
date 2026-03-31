@@ -195,7 +195,7 @@ void Main()
                          ,ID          = comboValue
                          ,Description = comboDesc
                          ,Flags       = combo.ToFlags() }}
-    .Dump("Explicit/Implicit Operator Tests", 0);
+    .Dump("14. Explicit/Implicit Operator Tests", 0);
   
   // Edge case: Cast to existing static field
   var shouldBeRead = (Permissions)1;
@@ -205,7 +205,7 @@ void Main()
        ,IsReferenceEqual = areSame
        ,Note             = areSame ? "✅ Cast returns cached static field" 
                                    : "⚠️ Cast created new instance (not cached)"}
-    .Dump("Reference Equality Test", 0);
+    .Dump("14. Reference Equality Test", 0);
 
   #endregion
   
