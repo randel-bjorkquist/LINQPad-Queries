@@ -48,21 +48,12 @@ async Task Main()
 	//   exceptionsAllowedBeforeBreaking — how many failures open it
 	//   durationOfBreak                 — how long it stays open
 	//   onBreak / onReset / onHalfOpen  — callbacks so we can see it
-	var breaker = Policy
-		.Handle<Exception>()
-		.CircuitBreakerAsync(
-			exceptionsAllowedBeforeBreaking: 3,
-			durationOfBreak:                 TimeSpan.FromSeconds(10),
-			onBreak: (ex, duration) =>
-				$"⚡ STATE → Open  (breaking for {duration.TotalSeconds}s — {ex.Message})"
-					.Dump("Circuit Breaker"),
-			onReset: () =>
-				"✅ STATE → Closed  (service recovered)"
-					.Dump("Circuit Breaker"),
-			onHalfOpen: () =>
-				"🔁 STATE → HalfOpen  (probing...)"
-					.Dump("Circuit Breaker")
-		);
+	var breaker = Policy.Handle<Exception>()
+		                  .CircuitBreakerAsync( exceptionsAllowedBeforeBreaking: 3
+		                                       ,durationOfBreak: TimeSpan.FromSeconds(10)
+		                                       ,onBreak:    (ex, duration) => $"⚡ STATE → Open  (breaking for {duration.TotalSeconds}s — {ex.Message})".Dump("Circuit Breaker")
+		                                       ,onReset:    ()             =>  "✅ STATE → Closed  (service recovered)".Dump("Circuit Breaker")
+		                                       ,onHalfOpen: ()             =>  "🔁 STATE → HalfOpen  (probing...)".Dump("Circuit Breaker"));
 
 	// ── Helper: execute through the breaker ──────────────────
 	async Task Attempt(string label)
@@ -70,18 +61,15 @@ async Task Main()
 		try
 		{
 			var result = await breaker.ExecuteAsync(CallService);
-			$"✅ {label} — {result}  [circuit: {breaker.CircuitState}]"
-				.Dump("Call");
+			$"✅ {label} — {result}  [circuit: {breaker.CircuitState}]".Dump("Call");
 		}
 		catch (BrokenCircuitException)
 		{
-			$"⚡ {label} — BLOCKED, circuit is open"
-				.Dump("Call");
+			$"⚡ {label} — BLOCKED, circuit is open".Dump("Call");
 		}
 		catch (Exception ex)
 		{
-			$"❌ {label} — FAILED: {ex.Message}  [circuit: {breaker.CircuitState}]"
-				.Dump("Call");
+			$"❌ {label} — FAILED: {ex.Message}  [circuit: {breaker.CircuitState}]".Dump("Call");
 		}
 	}
 
