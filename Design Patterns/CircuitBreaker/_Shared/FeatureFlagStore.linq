@@ -35,8 +35,23 @@ class FeatureFlagStore
   {
     lock (_lock)
     {
+			if(!File.Exists(_path))
+			{
+				_doc = new FeatureFlagDocument();
+				return;
+			}
+      
       var raw = File.ReadAllText(_path);
-      _doc = JsonSerializer.Deserialize<FeatureFlagDocument>(raw, _jsonOptions) ?? new FeatureFlagDocument();
+      
+      // Guard against empty file from a previous partial run
+      if(string.IsNullOrWhiteSpace(raw))
+      {
+        _doc = new FeatureFlagDocument();
+        return;
+      }
+            
+      _doc = JsonSerializer.Deserialize<FeatureFlagDocument>(raw, _jsonOptions) 
+             ?? new FeatureFlagDocument();
     }
   }
 

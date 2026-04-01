@@ -114,11 +114,9 @@ async Task Main()
 // ─────────────────────────────────────────────────────────────
 string FlagFilePath()
 {
-  var queriesRoot         = Path.GetDirectoryName(Util.CurrentQueryPath);
-  var circuitBreakerRoot  = Path.GetFullPath(Path.Combine(queriesRoot, ".."));
-  var dataPath            = Path.Combine(circuitBreakerRoot, "_Data", "HttpApi");
-  
+  var queriesRoot = Path.GetDirectoryName(Util.CurrentQueryPath);
+  var circuitBreakerRoot = Path.GetFullPath(Path.Combine(queriesRoot, ".."));
+  var dataPath = Path.Combine(circuitBreakerRoot, "_Data", "HttpApi");
   Directory.CreateDirectory(dataPath);
-  
   return Path.Combine(dataPath, "featureflags.json");
 }

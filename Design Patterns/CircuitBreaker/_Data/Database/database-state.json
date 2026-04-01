@@ -1,0 +1,27 @@
+{
+  "connections": {
+    "PHA-Auth-DB": {
+      "logicalName": "PHA-Auth-DB",
+      "server": "localhost",
+      "database": "PHA-Auth_Dev",
+      "circuitState": "Closed",
+      "failureCount": 0,
+      "lastStateChange": "2026-03-31T13:32:05.7169121Z",
+      "lastChecked": "2026-03-31T13:32:05.7169121Z",
+      "lastError": null,
+      "message": "Database recovered"
+    },
+    "PHA-Web-DB": {
+      "logicalName": "PHA-Web-DB",
+      "server": "localhost",
+      "database": "PHA-Web_Dev",
+      "circuitState": "Closed",
+      "failureCount": 0,
+      "lastStateChange": "2026-03-31T13:32:05.7457507Z",
+      "lastChecked": "2026-03-31T13:32:05.7457507Z",
+      "lastError": null,
+      "message": "Database recovered"
+    }
+  },
+  "lastUpdated": "2026-03-31T13:32:05.7457507Z"
+}

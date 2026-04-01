@@ -1,0 +1,27 @@
+{
+  "resourceName": "GenericResource",
+  "version": "1.0.0",
+  "loadedAt": "2026-04-01T17:30:24.6256179Z",
+  "settings": {
+    "MaxRetries": 3,
+    "TimeoutSeconds": 30,
+    "EnableCaching": true
+  },
+  "items": [
+    {
+      "key": "Item1",
+      "value": "Value1",
+      "enabled": true
+    },
+    {
+      "key": "Item2",
+      "value": "Value2",
+      "enabled": true
+    },
+    {
+      "key": "Item3",
+      "value": "Value3",
+      "enabled": false
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "resources": {
+    "GenericResource": {
+      "resourceName": "GenericResource",
+      "resourcePath": "C:\\Users\\work\\OneDrive - Management Computer Services\\Documents\\LINQPad Queries\\Design Patterns\\CircuitBreaker\\_Data\\FileResource\\resource.json",
+      "circuitState": "Closed",
+      "failureMode": "None",
+      "failureCount": 0,
+      "lastSuccessfulLoad": "2026-04-01T17:50:08.7388692Z",
+      "lastStateChange": "2026-04-01T17:50:08.7366069Z",
+      "lastChecked": "2026-04-01T17:50:08.7388692Z",
+      "lastError": null,
+      "message": "Resource recovered \u2014 cache refreshed",
+      "cacheAvailable": true
+    }
+  },
+  "lastUpdated": "2026-04-01T17:50:08.7388692Z"
+}
