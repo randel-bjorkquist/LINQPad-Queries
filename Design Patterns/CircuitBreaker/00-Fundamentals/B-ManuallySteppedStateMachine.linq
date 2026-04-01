@@ -111,19 +111,17 @@ class ManualCircuitBreaker
 	public void RecordSuccess()
 	{
 		_successCount++;
-		_lastError = null;
+    _failureCount = 0;
+		_lastError    = null;
 
 		if(_state == CircuitBreakerState.HalfOpen)
 		{
-			_state        = CircuitBreakerState.Closed;
-			_failureCount = 0;
-			
+			_state = CircuitBreakerState.Closed;
       $"✅ RecordSuccess → STATE: Closed (recovered after probe)".Dump();
 			
       return;
 		}
 
-		_failureCount = 0;
 		$"✅ RecordSuccess → STATE: {_state}".Dump();
 	}
 
@@ -131,7 +129,8 @@ class ManualCircuitBreaker
 	public void RecordFailure(string reason)
 	{
 		_failureCount++;
-		_lastError = reason;
+    _successCount = 0;
+		_lastError    = reason;
 
 		if(_state == CircuitBreakerState.HalfOpen)
 		{
